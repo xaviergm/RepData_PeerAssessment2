@@ -12,8 +12,11 @@ output: html_document
 The purpose of the analysis is to answer two questions using the storm data from the National Weather Service. The questions are:
 1. Across the United States, which types of events (as indicated in the EVTYPE variable) are most harmful with respect to population health?
 2. Across the United States, which types of events have the greatest economic consequences?
-In order to do that, the file provided in the course website will be used as a data source. The file can be found under the following URL at the moment of performing this analysis:
-        https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2
+In order to do that, the file provided in the course website will be used as a data source. The file can be found under the following URL at the moment of performing this analysis:   
+https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2
+
+The .pdf file (Storm Data Preparation) explaining the mapping of events can be found here:   
+https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf
 
 Note that both questions start with "Across the United States", which I interpret in the way that the geography related information isn't relevant and can be summarized across (either by averaging or summing).
 
@@ -47,14 +50,55 @@ NOAA_popu <- NOAA_P2 %>% group_by(EVTYPE) %>% summarize(popul_health = sum(FATAL
 ```
 
 This still results in a high amount of observations (`r nrow(NOAA_popu)` for `NOAA_popu` and `r nrow(NOAA_econ)` for `NOAA_econ`). A quick glance at the data shows that this is a data cleanliness issue, with multiple different names for the same type of event.
-As an example, all these types correspond to thunderstorm damage:
+
 
 ```{r evt_types, cache=TRUE}
 event_types <- sort(unique(as.factor(c(as.character(NOAA_popu$EVTYPE),
                                        as.character(NOAA_econ$EVTYPE)))))
-thunderst <- event_types[grep("*THUNDERSTORM*|*TSTM*", event_types)]
+thunderst <- event_types[grep("*THUNDERSTORM*|*TSTM*", event_types,
+                              ignore.case=TRUE)]
+```
+As an example, all these types correspond to thunderstorm damage:   
+```{r example1, cache=TRUE}
 thunderst
 ```
+
+Therefore, the following rules will be applied (in the order they appear below) to clean-up the `EVTYPE`, consisting of strings to be found in the values of `EVTYPE` and their replacement:   
+```{r new_evtype, cache=TRUE}
+write.csv(event_types, file = "event_types.csv")
+# Manual processing goes here in order to do the mapping of the 488 values to
+# the 48 standard from the .pdf document explaining the standard types.
+new_event_types <- read.csv("./new_evtype.csv", sep=";")
+new_event_types
+```
+
+After that, the values of `EVTYPE` are replaced using the data in `new_event_types`:
+
+```{r replacement, cache=TRUE}
+NOAA_popu_new <- NOAA_popu
+NOAA_econ_new <- NOAA_econ
+#NOAA_popu_new$EVTYPE <- as.character(NOAA_popu$EVTYPE)
+#NOAA_econ_new$EVTYPE <- as.character(NOAA_econ$EVTYPE)
+for (i in 1:nrow(new_event_types)){
+        c <- as.character(new_event_types[i,2])
+	d <- as.character(new_event_types[i,3])
+	NOAA_popu_new[which(as.character(NOAA_popu$EVTYPE) == c)] <- d
+        NOAA_econ_new[which(as.character(NOAA_econ$EVTYPE) == c)] <- d
+}
+NOAA_popu_new$EVTYPE <- as.factor(NOAA_popu_new$EVTYPE)
+NOAA_popu_new$EVTYPE <- as.factor(NOAA_popu_new$EVTYPE)
+```
+
+Finally, the data frame is grouped again by `EVTYPE` and `summarize(sum())` is used to come to 48 observations in each table (`NOAA_popu_new` and `NOAA_econ_new`):   
+```{r summary, cache=TRUE}
+NOAA_popu_final <- NOAA_popu_new %>% group_by(EVTYPE) %>% summarize(sum())
+NOAA_popu_final <- NOAA_popu_new %>% group_by(EVTYPE) %>% summarize(sum())
+```
+
+As expected, the number of observations in each table is:   
+* `NOAA_popu_final: {r nrow(NOAA_popu_final)}`
+* `NOAA_econ_final: {r nrow(NOAA_econ_final)}`
+
 
 
 ## Results

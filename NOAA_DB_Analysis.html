@@ -71,7 +71,8 @@ img {
 <h1>Title</h1>
 <div id="synopsis" class="section level2">
 <h2>Synopsis</h2>
-<p>The purpose of the analysis is to answer two questions using the storm data from the National Weather Service. The questions are: 1. Across the United States, which types of events (as indicated in the EVTYPE variable) are most harmful with respect to population health? 2. Across the United States, which types of events have the greatest economic consequences? In order to do that, the file provided in the course website will be used as a data source. The file can be found under the following URL at the moment of performing this analysis: <a href="https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2">https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2</a></p>
+<p>The purpose of the analysis is to answer two questions using the storm data from the National Weather Service. The questions are: 1. Across the United States, which types of events (as indicated in the EVTYPE variable) are most harmful with respect to population health? 2. Across the United States, which types of events have the greatest economic consequences? In order to do that, the file provided in the course website will be used as a data source. The file can be found under the following URL at the moment of performing this analysis:<br /><a href="https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2">https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2</a></p>
+<p>The .pdf file (Storm Data Preparation) explaining the mapping of events can be found here:<br /><a href="https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf">https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf</a></p>
 <p>Note that both questions start with “Across the United States”, which I interpret in the way that the geography related information isn’t relevant and can be summarized across (either by averaging or summing).</p>
 </div>
 <div id="data-processing" class="section level2">
@@ -103,11 +104,13 @@ NOAA_P2 &lt;- NOAA_raw[p2_vars] %&gt;%
 
 NOAA_econ &lt;- NOAA_P2 %&gt;% group_by(EVTYPE) %&gt;% summarize(econ_cons = sum(PROPDMG + CROPDMG)) %&gt;% arrange(desc(econ_cons))
 NOAA_popu &lt;- NOAA_P2 %&gt;% group_by(EVTYPE) %&gt;% summarize(popul_health = sum(FATALITIES + INJURIES)) %&gt;% arrange(desc(popul_health))</code></pre>
-<p>This still results in a high amount of observations (488 for <code>NOAA_popu</code> and 488 for <code>NOAA_econ</code>). A quick glance at the data shows that this is a data cleanliness issue, with multiple different names for the same type of event. As an example, all these types correspond to thunderstorm damage:</p>
+<p>This still results in a high amount of observations (488 for <code>NOAA_popu</code> and 488 for <code>NOAA_econ</code>). A quick glance at the data shows that this is a data cleanliness issue, with multiple different names for the same type of event.</p>
 <pre class="r"><code>event_types &lt;- sort(unique(as.factor(c(as.character(NOAA_popu$EVTYPE),
                                        as.character(NOAA_econ$EVTYPE)))))
-thunderst &lt;- event_types[grep(&quot;*THUNDERSTORM*|*TSTM*&quot;, event_types)]
-thunderst</code></pre>
+thunderst &lt;- event_types[grep(&quot;*THUNDERSTORM*|*TSTM*&quot;, event_types,
+                              ignore.case=TRUE)]</code></pre>
+<p>As an example, all these types correspond to thunderstorm damage:</p>
+<pre class="r"><code>thunderst</code></pre>
 <pre><code>##  [1]  TSTM WIND                      TSTM WIND (G45)              
 ##  [3] FLASH FLOODING/THUNDERSTORM WI LIGHTNING AND THUNDERSTORM WIN
 ##  [5] LIGHTNING THUNDERSTORM WINDS   MARINE THUNDERSTORM WIND      
@@ -135,16 +138,513 @@ thunderst</code></pre>
 ## [49] THUNDERSTORM WINS              THUNDERSTORMS                 
 ## [51] THUNDERSTORMS WIND             THUNDERSTORMS WINDS           
 ## [53] THUNDERSTORMW                  THUNDERSTORMWINDS             
-## [55] TORNADOES, TSTM WIND, HAIL     TSTM WIND                     
-## [57] TSTM WIND  (G45)               TSTM WIND (41)                
-## [59] TSTM WIND (G35)                TSTM WIND (G40)               
-## [61] TSTM WIND (G45)                TSTM WIND 40                  
-## [63] TSTM WIND 45                   TSTM WIND 55                  
-## [65] TSTM WIND 65)                  TSTM WIND AND LIGHTNING       
-## [67] TSTM WIND DAMAGE               TSTM WIND G45                 
-## [69] TSTM WIND G58                  TSTM WIND/HAIL                
-## [71] TSTM WINDS                     TSTMW                         
+## [55] TORNADOES, TSTM WIND, HAIL     Tstm Wind                     
+## [57] TSTM WIND                      TSTM WIND  (G45)              
+## [59] TSTM WIND (41)                 TSTM WIND (G35)               
+## [61] TSTM WIND (G40)                TSTM WIND (G45)               
+## [63] TSTM WIND 40                   TSTM WIND 45                  
+## [65] TSTM WIND 55                   TSTM WIND 65)                 
+## [67] TSTM WIND AND LIGHTNING        TSTM WIND DAMAGE              
+## [69] TSTM WIND G45                  TSTM WIND G58                 
+## [71] TSTM WIND/HAIL                 TSTM WINDS                    
+## [73] TSTMW                         
 ## 488 Levels:    HIGH SURF ADVISORY  FLASH FLOOD ... WINTRY MIX</code></pre>
+<p>Therefore, the following rules will be applied (in the order they appear below) to clean-up the <code>EVTYPE</code>, consisting of strings to be found in the values of <code>EVTYPE</code> and their replacement:</p>
+<pre class="r"><code>write.csv(event_types, file = &quot;event_types.csv&quot;)
+# Manual processing goes here in order to do the mapping of the 488 values to
+# the 48 standard from the .pdf document explaining the standard types.
+new_event_types &lt;- read.csv(&quot;./new_evtype.csv&quot;, sep=&quot;;&quot;)
+new_event_types</code></pre>
+<pre><code>##      ID                         EVTYPE               New_EVTYPE
+## 1     1             HIGH SURF ADVISORY                High Surf
+## 2     2                    FLASH FLOOD              Flash Flood
+## 3     3                      TSTM WIND        Thunderstorm Wind
+## 4     4                TSTM WIND (G45)        Thunderstorm Wind
+## 5     5                              ?                    Other
+## 6     6            AGRICULTURAL FREEZE             Frost Freeze
+## 7     7                  APACHE COUNTY                    Other
+## 8     8         ASTRONOMICAL HIGH TIDE            Coastal Flood
+## 9     9          ASTRONOMICAL LOW TIDE    Astronomical Low Tide
+## 10   10                       AVALANCE                Avalanche
+## 11   11                      AVALANCHE                Avalanche
+## 12   12                  Beach Erosion            Coastal Flood
+## 13   13                      BLACK ICE             Frost Freeze
+## 14   14                       BLIZZARD                 Blizzard
+## 15   15          BLIZZARD/WINTER STORM                 Blizzard
+## 16   16                   BLOWING DUST               Dust Storm
+## 17   17                   blowing snow               Heavy Snow
+## 18   18                   BLOWING SNOW               Heavy Snow
+## 19   19               BREAKUP FLOODING                    Flood
+## 20   20                     BRUSH FIRE                 Wildfire
+## 21   21      COASTAL  FLOODING/EROSION            Coastal Flood
+## 22   22                COASTAL EROSION            Coastal Flood
+## 23   23                  Coastal Flood            Coastal Flood
+## 24   24                  COASTAL FLOOD            Coastal Flood
+## 25   25               Coastal Flooding            Coastal Flood
+## 26   26               COASTAL FLOODING            Coastal Flood
+## 27   27       COASTAL FLOODING/EROSION            Coastal Flood
+## 28   28                  Coastal Storm         Storm Surge Tide
+## 29   29                  COASTAL STORM         Storm Surge Tide
+## 30   30                  COASTAL SURGE         Storm Surge Tide
+## 31   31                   COASTALSTORM         Storm Surge Tide
+## 32   32                           Cold          Cold Wind Chill
+## 33   33                           COLD          Cold Wind Chill
+## 34   34               COLD AIR TORNADO                  Tornado
+## 35   35                  COLD AND SNOW               Heavy Snow
+## 36   36        COLD AND WET CONDITIONS          Cold Wind Chill
+## 37   37               Cold Temperature          Cold Wind Chill
+## 38   38                      COLD WAVE          Cold Wind Chill
+## 39   39                   COLD WEATHER          Cold Wind Chill
+## 40   40                COLD/WIND CHILL          Cold Wind Chill
+## 41   41                     COLD/WINDS          Cold Wind Chill
+## 42   42                   COOL AND WET               Heavy Rain
+## 43   43                      DAM BREAK                    Other
+## 44   44                Damaging Freeze             Frost Freeze
+## 45   45                DAMAGING FREEZE             Frost Freeze
+## 46   46                      DENSE FOG                Dense Fog
+## 47   47                    DENSE SMOKE              Dense Smoke
+## 48   48                      DOWNBURST                High Wind
+## 49   49                        DROUGHT                  Drought
+## 50   50         DROUGHT/EXCESSIVE HEAT                     Heat
+## 51   51                       DROWNING                    Other
+## 52   52                 DRY MICROBURST                High Wind
+## 53   53           DRY MIRCOBURST WINDS                High Wind
+## 54   54                     Dust Devil               Dust Devil
+## 55   55                     DUST DEVIL               Dust Devil
+## 56   56          DUST DEVIL WATERSPOUT               Dust Devil
+## 57   57                     DUST STORM               Dust Storm
+## 58   58          DUST STORM/HIGH WINDS               Dust Storm
+## 59   59                    Early Frost             Frost Freeze
+## 60   60             Erosion/Cstl Flood            Coastal Flood
+## 61   61                 EXCESSIVE HEAT                     Heat
+## 62   62             EXCESSIVE RAINFALL               Heavy Rain
+## 63   63                 EXCESSIVE SNOW               Heavy Snow
+## 64   64              EXCESSIVE WETNESS               Heavy Rain
+## 65   65                  Extended Cold          Cold Wind Chill
+## 66   66                   Extreme Cold  Extreme Cold Wind Chill
+## 67   67                   EXTREME COLD  Extreme Cold Wind Chill
+## 68   68        EXTREME COLD/WIND CHILL  Extreme Cold Wind Chill
+## 69   69                   EXTREME HEAT                     Heat
+## 70   70             EXTREME WIND CHILL  Extreme Cold Wind Chill
+## 71   71              EXTREME WINDCHILL  Extreme Cold Wind Chill
+## 72   72               FALLING SNOW/ICE               Heavy Snow
+## 73   73                    FLASH FLOOD              Flash Flood
+## 74   74       FLASH FLOOD - HEAVY RAIN               Heavy Rain
+## 75   75      FLASH FLOOD FROM ICE JAMS              Flash Flood
+## 76   76         FLASH FLOOD LANDSLIDES              Flash Flood
+## 77   77              FLASH FLOOD WINDS              Flash Flood
+## 78   78                   FLASH FLOOD/              Flash Flood
+## 79   79            FLASH FLOOD/ STREET              Flash Flood
+## 80   80              FLASH FLOOD/FLOOD              Flash Flood
+## 81   81          FLASH FLOOD/LANDSLIDE              Flash Flood
+## 82   82                 FLASH FLOODING              Flash Flood
+## 83   83           FLASH FLOODING/FLOOD              Flash Flood
+## 84   84 FLASH FLOODING/THUNDERSTORM WI              Flash Flood
+## 85   85                   FLASH FLOODS              Flash Flood
+## 86   86                          FLOOD                    Flood
+## 87   87             FLOOD &amp; HEAVY RAIN               Heavy Rain
+## 88   88                    FLOOD FLASH              Flash Flood
+## 89   89                    FLOOD/FLASH              Flash Flood
+## 90   90              FLOOD/FLASH FLOOD              Flash Flood
+## 91   91              FLOOD/FLASH/FLOOD              Flash Flood
+## 92   92               FLOOD/FLASHFLOOD              Flash Flood
+## 93   93               FLOOD/RAIN/WINDS               Heavy Rain
+## 94   94              FLOOD/RIVER FLOOD                    Flood
+## 95   95                       FLOODING                    Flood
+## 96   96            FLOODING/HEAVY RAIN               Heavy Rain
+## 97   97                         FLOODS                    Flood
+## 98   98                            FOG                Dense Fog
+## 99   99      FOG AND COLD TEMPERATURES          Cold Wind Chill
+## 100 100                   FOREST FIRES                 Wildfire
+## 101 101                         Freeze             Frost Freeze
+## 102 102                         FREEZE             Frost Freeze
+## 103 103               Freezing drizzle                    Sleet
+## 104 104               Freezing Drizzle                    Sleet
+## 105 105               FREEZING DRIZZLE                    Sleet
+## 106 106                   FREEZING FOG             Freezing Fog
+## 107 107                  Freezing Rain               Heavy Rain
+## 108 108                  FREEZING RAIN               Heavy Rain
+## 109 109            FREEZING RAIN/SLEET               Heavy Rain
+## 110 110             FREEZING RAIN/SNOW               Heavy Rain
+## 111 111                 Freezing Spray                    Sleet
+## 112 112                          FROST             Frost Freeze
+## 113 113                   Frost/Freeze             Frost Freeze
+## 114 114                   FROST/FREEZE             Frost Freeze
+## 115 115                  FROST\\FREEZE             Frost Freeze
+## 116 116                   FUNNEL CLOUD             Funnel Cloud
+## 117 117                          Glaze                    Sleet
+## 118 118                          GLAZE                    Sleet
+## 119 119                      GLAZE ICE                    Sleet
+## 120 120                GLAZE/ICE STORM                    Sleet
+## 121 121                  gradient wind                High Wind
+## 122 122                  Gradient wind                High Wind
+## 123 123                  GRADIENT WIND                High Wind
+## 124 124                    GRASS FIRES                 Wildfire
+## 125 125                GROUND BLIZZARD                 Blizzard
+## 126 126                       GUSTNADO                  Tornado
+## 127 127                     GUSTY WIND                High Wind
+## 128 128                GUSTY WIND/HAIL                     Hail
+## 129 129            GUSTY WIND/HVY RAIN               Heavy Rain
+## 130 130                Gusty wind/rain               Heavy Rain
+## 131 131                    Gusty winds                High Wind
+## 132 132                    Gusty Winds                High Wind
+## 133 133                    GUSTY WINDS                High Wind
+## 134 134                           HAIL                     Hail
+## 135 135                      HAIL 0.75                     Hail
+## 136 136                       HAIL 075                     Hail
+## 137 137                       HAIL 100                     Hail
+## 138 138                       HAIL 125                     Hail
+## 139 139                       HAIL 150                     Hail
+## 140 140                       HAIL 175                     Hail
+## 141 141                       HAIL 200                     Hail
+## 142 142                       HAIL 275                     Hail
+## 143 143                       HAIL 450                     Hail
+## 144 144                        HAIL 75                     Hail
+## 145 145                    HAIL DAMAGE                     Hail
+## 146 146                      HAIL/WIND                     Hail
+## 147 147                     HAIL/WINDS                     Hail
+## 148 148                      HAILSTORM                     Hail
+## 149 149                    HARD FREEZE             Frost Freeze
+## 150 150                 HAZARDOUS SURF                High Surf
+## 151 151                           HEAT                     Heat
+## 152 152                      Heat Wave                     Heat
+## 153 153                      HEAT WAVE                     Heat
+## 154 154              HEAT WAVE DROUGHT                     Heat
+## 155 155                     HEAT WAVES                     Heat
+## 156 156                HEAVY LAKE SNOW         Lake-Effect Snow
+## 157 157                      HEAVY MIX               Heavy Rain
+## 158 158            HEAVY PRECIPITATION               Heavy Rain
+## 159 159                     HEAVY RAIN               Heavy Rain
+## 160 160           HEAVY RAIN AND FLOOD               Heavy Rain
+## 161 161           Heavy Rain/High Surf               Heavy Rain
+## 162 162           HEAVY RAIN/LIGHTNING               Heavy Rain
+## 163 163      HEAVY RAIN/SEVERE WEATHER               Heavy Rain
+## 164 164  HEAVY RAIN/SMALL STREAM URBAN               Heavy Rain
+## 165 165                HEAVY RAIN/SNOW               Heavy Rain
+## 166 166                    HEAVY RAINS               Heavy Rain
+## 167 167           HEAVY RAINS/FLOODING               Heavy Rain
+## 168 168                     HEAVY SEAS            Coastal Flood
+## 169 169                   HEAVY SHOWER               Heavy Rain
+## 170 170                     HEAVY SNOW               Heavy Snow
+## 171 171             HEAVY SNOW-SQUALLS               Heavy Snow
+## 172 172      HEAVY SNOW AND HIGH WINDS               Heavy Snow
+## 173 173    HEAVY SNOW AND STRONG WINDS               Heavy Snow
+## 174 174              Heavy snow shower               Heavy Snow
+## 175 175             HEAVY SNOW SQUALLS               Heavy Snow
+## 176 176            HEAVY SNOW/BLIZZARD                 Blizzard
+## 177 177  HEAVY SNOW/BLIZZARD/AVALANCHE                 Blizzard
+## 178 178       HEAVY SNOW/FREEZING RAIN               Heavy Rain
+## 179 179  HEAVY SNOW/HIGH WINDS &amp; FLOOD               Heavy Snow
+## 180 180                 HEAVY SNOW/ICE               Heavy Snow
+## 181 181             HEAVY SNOW/SQUALLS               Heavy Snow
+## 182 182                HEAVY SNOW/WIND               Heavy Snow
+## 183 183        HEAVY SNOW/WINTER STORM               Heavy Snow
+## 184 184                 HEAVY SNOWPACK               Heavy Snow
+## 185 185                     Heavy Surf                High Surf
+## 186 186                     HEAVY SURF                High Surf
+## 187 187            Heavy surf and wind                High Surf
+## 188 188    HEAVY SURF COASTAL FLOODING            Coastal Flood
+## 189 189           HEAVY SURF/HIGH SURF                High Surf
+## 190 190                   HEAVY SWELLS                    Flood
+## 191 191                           HIGH            Coastal Flood
+## 192 192                    HIGH  WINDS                High Wind
+## 193 193                      HIGH SEAS            Coastal Flood
+## 194 194                      High Surf                High Surf
+## 195 195                      HIGH SURF                High Surf
+## 196 196                    HIGH SWELLS            Coastal Flood
+## 197 197                     HIGH TIDES            Coastal Flood
+## 198 198                     HIGH WATER            Coastal Flood
+## 199 199                     HIGH WAVES                High Surf
+## 200 200                      HIGH WIND                High Wind
+## 201 201                HIGH WIND (G40)                High Wind
+## 202 202                   HIGH WIND 48                High Wind
+## 203 203             HIGH WIND AND SEAS                High Wind
+## 204 204               HIGH WIND DAMAGE                High Wind
+## 205 205             HIGH WIND/BLIZZARD                 Blizzard
+## 206 206           HIGH WIND/HEAVY SNOW                High Wind
+## 207 207                 HIGH WIND/SEAS                High Wind
+## 208 208                     HIGH WINDS                High Wind
+## 209 209         HIGH WINDS HEAVY RAINS                High Wind
+## 210 210                    HIGH WINDS/                High Wind
+## 211 211       HIGH WINDS/COASTAL FLOOD                High Wind
+## 212 212                HIGH WINDS/COLD                High Wind
+## 213 213          HIGH WINDS/HEAVY RAIN                High Wind
+## 214 214                HIGH WINDS/SNOW                High Wind
+## 215 215                      HURRICANE      Hurricane (Typhoon)
+## 216 216     HURRICANE-GENERATED SWELLS      Hurricane (Typhoon)
+## 217 217              Hurricane Edouard      Hurricane (Typhoon)
+## 218 218                HURRICANE EMILY      Hurricane (Typhoon)
+## 219 219                 HURRICANE ERIN      Hurricane (Typhoon)
+## 220 220                HURRICANE FELIX      Hurricane (Typhoon)
+## 221 221               HURRICANE GORDON      Hurricane (Typhoon)
+## 222 222                 HURRICANE OPAL      Hurricane (Typhoon)
+## 223 223      HURRICANE OPAL/HIGH WINDS      Hurricane (Typhoon)
+## 224 224              HURRICANE/TYPHOON      Hurricane (Typhoon)
+## 225 225                       HVY RAIN               Heavy Rain
+## 226 226          HYPERTHERMIA/EXPOSURE                     Heat
+## 227 227                    HYPOTHERMIA          Cold Wind Chill
+## 228 228           Hypothermia/Exposure          Cold Wind Chill
+## 229 229           HYPOTHERMIA/EXPOSURE          Cold Wind Chill
+## 230 230                            ICE             Frost Freeze
+## 231 231                   ICE AND SNOW               Heavy Snow
+## 232 232                      ICE FLOES             Frost Freeze
+## 233 233                        ICE JAM             Frost Freeze
+## 234 234           Ice jam flood (minor                    Flood
+## 235 235               ICE JAM FLOODING                    Flood
+## 236 236                    ICE ON ROAD             Frost Freeze
+## 237 237                      ICE ROADS             Frost Freeze
+## 238 238                      ICE STORM                Ice Storm
+## 239 239          ICE STORM/FLASH FLOOD              Flash Flood
+## 240 240               ICE/STRONG WINDS                High Wind
+## 241 241                      ICY ROADS             Frost Freeze
+## 242 242               LAKE-EFFECT SNOW         Lake-Effect Snow
+## 243 243               Lake Effect Snow         Lake-Effect Snow
+## 244 244               LAKE EFFECT SNOW         Lake-Effect Snow
+## 245 245                     LAKE FLOOD          Lakeshore Flood
+## 246 246                LAKESHORE FLOOD          Lakeshore Flood
+## 247 247                      LANDSLIDE                Avalanche
+## 248 248                     LANDSLIDES                Avalanche
+## 249 249                      Landslump                Avalanche
+## 250 250                      LANDSPOUT                Avalanche
+## 251 251               LATE SEASON SNOW               Heavy Snow
+## 252 252            LIGHT FREEZING RAIN               Heavy Rain
+## 253 253                     Light snow               Heavy Snow
+## 254 254                     Light Snow               Heavy Snow
+## 255 255                     LIGHT SNOW               Heavy Snow
+## 256 256                 Light Snowfall               Heavy Snow
+## 257 257                       LIGHTING                Lightning
+## 258 258                      LIGHTNING                Lightning
+## 259 259             LIGHTNING  WAUSEON                Lightning
+## 260 260       LIGHTNING AND HEAVY RAIN               Heavy Rain
+## 261 261 LIGHTNING AND THUNDERSTORM WIN        Thunderstorm Wind
+## 262 262                 LIGHTNING FIRE                Lightning
+## 263 263               LIGHTNING INJURY                Lightning
+## 264 264   LIGHTNING THUNDERSTORM WINDS        Thunderstorm Wind
+## 265 265                     LIGHTNING.                Lightning
+## 266 266           LIGHTNING/HEAVY RAIN               Heavy Rain
+## 267 267                      LIGNTNING                Lightning
+## 268 268                LOW TEMPERATURE          Cold Wind Chill
+## 269 269                    MAJOR FLOOD                    Flood
+## 270 270                Marine Accident                    Other
+## 271 271                    MARINE HAIL                     Hail
+## 272 272               MARINE HIGH WIND         Marine High Wind
+## 273 273                  MARINE MISHAP                    Other
+## 274 274             MARINE STRONG WIND       Marine Strong Wind
+## 275 275       MARINE THUNDERSTORM WIND Marine Thunderstorm Wind
+## 276 276               MARINE TSTM WIND Marine Thunderstorm Wind
+## 277 277                     Microburst                High Wind
+## 278 278                     MICROBURST                High Wind
+## 279 279               MICROBURST WINDS                High Wind
+## 280 280                 MINOR FLOODING                    Flood
+## 281 281                   MIXED PRECIP               Heavy Rain
+## 282 282            Mixed Precipitation               Heavy Rain
+## 283 283            MIXED PRECIPITATION               Heavy Rain
+## 284 284                      MUD SLIDE                Avalanche
+## 285 285                     MUD SLIDES                Avalanche
+## 286 286      MUD SLIDES URBAN FLOODING                    Flood
+## 287 287                       Mudslide                Avalanche
+## 288 288                       MUDSLIDE                Avalanche
+## 289 289                      Mudslides                Avalanche
+## 290 290                      MUDSLIDES                Avalanche
+## 291 291         NON-SEVERE WIND DAMAGE                High Wind
+## 292 292                  NON-TSTM WIND                High Wind
+## 293 293                  NON TSTM WIND                High Wind
+## 294 294                          Other                    Other
+## 295 295                          OTHER                    Other
+## 296 296                           RAIN               Heavy Rain
+## 297 297                      RAIN/SNOW               Heavy Rain
+## 298 298                      RAIN/WIND               Heavy Rain
+## 299 299                      RAINSTORM               Heavy Rain
+## 300 300           RAPIDLY RISING WATER                    Flood
+## 301 301                    RECORD COLD  Extreme Cold Wind Chill
+## 302 302                    RECORD HEAT                     Heat
+## 303 303                RECORD RAINFALL               Heavy Rain
+## 304 304                    RECORD SNOW               Heavy Snow
+## 305 305          RECORD/EXCESSIVE HEAT                     Heat
+## 306 306                    RIP CURRENT              Rip Current
+## 307 307                   RIP CURRENTS              Rip Current
+## 308 308        RIP CURRENTS/HEAVY SURF                High Surf
+## 309 309         RIVER AND STREAM FLOOD                    Flood
+## 310 310                    RIVER FLOOD                    Flood
+## 311 311                 River Flooding                    Flood
+## 312 312                 RIVER FLOODING                    Flood
+## 313 313                     ROCK SLIDE                Avalanche
+## 314 314                     ROGUE WAVE                   Seiche
+## 315 315                     ROUGH SEAS                High Surf
+## 316 316                     ROUGH SURF                High Surf
+## 317 317                    RURAL FLOOD                    Flood
+## 318 318                         SEICHE                   Seiche
+## 319 319            SEVERE THUNDERSTORM        Thunderstorm Wind
+## 320 320      SEVERE THUNDERSTORM WINDS        Thunderstorm Wind
+## 321 321           SEVERE THUNDERSTORMS        Thunderstorm Wind
+## 322 322              SEVERE TURBULENCE        Thunderstorm Wind
+## 323 323                          SLEET                    Sleet
+## 324 324                SLEET/ICE STORM                    Sleet
+## 325 325                     SMALL HAIL                     Hail
+## 326 326             SMALL STREAM FLOOD                    Flood
+## 327 327                           Snow               Heavy Snow
+## 328 328                           SNOW               Heavy Snow
+## 329 329              SNOW ACCUMULATION               Heavy Snow
+## 330 330            SNOW AND HEAVY SNOW               Heavy Snow
+## 331 331                   SNOW AND ICE               Heavy Snow
+## 332 332             SNOW AND ICE STORM               Heavy Snow
+## 333 333             SNOW FREEZING RAIN               Heavy Rain
+## 334 334                    SNOW SQUALL               Heavy Snow
+## 335 335                   Snow Squalls               Heavy Snow
+## 336 336                   SNOW SQUALLS               Heavy Snow
+## 337 337              SNOW/ BITTER COLD               Heavy Snow
+## 338 338                      SNOW/ ICE               Heavy Snow
+## 339 339              SNOW/BLOWING SNOW               Heavy Snow
+## 340 340                      SNOW/COLD               Heavy Snow
+## 341 341             SNOW/FREEZING RAIN               Heavy Rain
+## 342 342                SNOW/HEAVY SNOW               Heavy Snow
+## 343 343                SNOW/HIGH WINDS               Heavy Snow
+## 344 344                       SNOW/ICE               Heavy Snow
+## 345 345                 SNOW/ICE STORM               Heavy Snow
+## 346 346                     SNOW/SLEET               Heavy Snow
+## 347 347       SNOW/SLEET/FREEZING RAIN               Heavy Rain
+## 348 348              SNOWMELT FLOODING                    Flood
+## 349 349              STORM FORCE WINDS        Thunderstorm Wind
+## 350 350                    STORM SURGE         Storm Surge Tide
+## 351 351               STORM SURGE/TIDE         Storm Surge Tide
+## 352 352                    Strong Wind              Strong Wind
+## 353 353                    STRONG WIND              Strong Wind
+## 354 354                   Strong Winds              Strong Wind
+## 355 355                   STRONG WINDS              Strong Wind
+## 356 356              THUDERSTORM WINDS        Thunderstorm Wind
+## 357 357            THUNDEERSTORM WINDS        Thunderstorm Wind
+## 358 358            THUNDERESTORM WINDS        Thunderstorm Wind
+## 359 359                    THUNDERSNOW        Thunderstorm Wind
+## 360 360                   THUNDERSTORM        Thunderstorm Wind
+## 361 361            THUNDERSTORM  WINDS        Thunderstorm Wind
+## 362 362         THUNDERSTORM DAMAGE TO        Thunderstorm Wind
+## 363 363              THUNDERSTORM HAIL        Thunderstorm Wind
+## 364 364              THUNDERSTORM WIND        Thunderstorm Wind
+## 365 365        THUNDERSTORM WIND (G40)        Thunderstorm Wind
+## 366 366       THUNDERSTORM WIND 60 MPH        Thunderstorm Wind
+## 367 367       THUNDERSTORM WIND 65 MPH        Thunderstorm Wind
+## 368 368        THUNDERSTORM WIND 65MPH        Thunderstorm Wind
+## 369 369       THUNDERSTORM WIND 98 MPH        Thunderstorm Wind
+## 370 370          THUNDERSTORM WIND G50        Thunderstorm Wind
+## 371 371          THUNDERSTORM WIND G52        Thunderstorm Wind
+## 372 372          THUNDERSTORM WIND G55        Thunderstorm Wind
+## 373 373          THUNDERSTORM WIND G60        Thunderstorm Wind
+## 374 374        THUNDERSTORM WIND TREES        Thunderstorm Wind
+## 375 375             THUNDERSTORM WIND.        Thunderstorm Wind
+## 376 376        THUNDERSTORM WIND/ TREE        Thunderstorm Wind
+## 377 377       THUNDERSTORM WIND/ TREES        Thunderstorm Wind
+## 378 378       THUNDERSTORM WIND/AWNING        Thunderstorm Wind
+## 379 379         THUNDERSTORM WIND/HAIL        Thunderstorm Wind
+## 380 380    THUNDERSTORM WIND/LIGHTNING        Thunderstorm Wind
+## 381 381             THUNDERSTORM WINDS        Thunderstorm Wind
+## 382 382          THUNDERSTORM WINDS 13        Thunderstorm Wind
+## 383 383      THUNDERSTORM WINDS 63 MPH        Thunderstorm Wind
+## 384 384         THUNDERSTORM WINDS AND        Thunderstorm Wind
+## 385 385         THUNDERSTORM WINDS G60        Thunderstorm Wind
+## 386 386        THUNDERSTORM WINDS HAIL        Thunderstorm Wind
+## 387 387   THUNDERSTORM WINDS LIGHTNING        Thunderstorm Wind
+## 388 388            THUNDERSTORM WINDS.        Thunderstorm Wind
+## 389 389      THUNDERSTORM WINDS/ FLOOD        Thunderstorm Wind
+## 390 390    THUNDERSTORM WINDS/FLOODING        Thunderstorm Wind
+## 391 391 THUNDERSTORM WINDS/FUNNEL CLOU        Thunderstorm Wind
+## 392 392        THUNDERSTORM WINDS/HAIL        Thunderstorm Wind
+## 393 393           THUNDERSTORM WINDS53        Thunderstorm Wind
+## 394 394         THUNDERSTORM WINDSHAIL        Thunderstorm Wind
+## 395 395            THUNDERSTORM WINDSS        Thunderstorm Wind
+## 396 396              THUNDERSTORM WINS        Thunderstorm Wind
+## 397 397                  THUNDERSTORMS        Thunderstorm Wind
+## 398 398             THUNDERSTORMS WIND        Thunderstorm Wind
+## 399 399            THUNDERSTORMS WINDS        Thunderstorm Wind
+## 400 400                  THUNDERSTORMW        Thunderstorm Wind
+## 401 401              THUNDERSTORMWINDS        Thunderstorm Wind
+## 402 402              THUNDERSTROM WIND        Thunderstorm Wind
+## 403 403              THUNDERTORM WINDS        Thunderstorm Wind
+## 404 404              THUNERSTORM WINDS        Thunderstorm Wind
+## 405 405                 Tidal Flooding            Coastal Flood
+## 406 406                 TIDAL FLOODING            Coastal Flood
+## 407 407                        TORNADO                  Tornado
+## 408 408                     TORNADO F0                  Tornado
+## 409 409                     TORNADO F1                  Tornado
+## 410 410                     TORNADO F2                  Tornado
+## 411 411                     TORNADO F3                  Tornado
+## 412 412                      TORNADOES                  Tornado
+## 413 413     TORNADOES, TSTM WIND, HAIL                  Tornado
+## 414 414                        TORNDAO                  Tornado
+## 415 415            Torrential Rainfall               Heavy Rain
+## 416 416            TROPICAL DEPRESSION      Tropical Depression
+## 417 417                 TROPICAL STORM           Tropical Storm
+## 418 418         TROPICAL STORM ALBERTO           Tropical Storm
+## 419 419            TROPICAL STORM DEAN           Tropical Storm
+## 420 420          TROPICAL STORM GORDON           Tropical Storm
+## 421 421           TROPICAL STORM JERRY           Tropical Storm
+## 422 422                      Tstm Wind        Thunderstorm Wind
+## 423 423                      TSTM WIND        Thunderstorm Wind
+## 424 424               TSTM WIND  (G45)        Thunderstorm Wind
+## 425 425                 TSTM WIND (41)        Thunderstorm Wind
+## 426 426                TSTM WIND (G35)        Thunderstorm Wind
+## 427 427                TSTM WIND (G40)        Thunderstorm Wind
+## 428 428                TSTM WIND (G45)        Thunderstorm Wind
+## 429 429                   TSTM WIND 40        Thunderstorm Wind
+## 430 430                   TSTM WIND 45        Thunderstorm Wind
+## 431 431                   TSTM WIND 55        Thunderstorm Wind
+## 432 432                  TSTM WIND 65)        Thunderstorm Wind
+## 433 433        TSTM WIND AND LIGHTNING        Thunderstorm Wind
+## 434 434               TSTM WIND DAMAGE        Thunderstorm Wind
+## 435 435                  TSTM WIND G45        Thunderstorm Wind
+## 436 436                  TSTM WIND G58        Thunderstorm Wind
+## 437 437                 TSTM WIND/HAIL        Thunderstorm Wind
+## 438 438                     TSTM WINDS        Thunderstorm Wind
+## 439 439                          TSTMW        Thunderstorm Wind
+## 440 440                        TSUNAMI                  Tsunami
+## 441 441               TUNDERSTORM WIND        Thunderstorm Wind
+## 442 442                        TYPHOON      Hurricane (Typhoon)
+## 443 443              Unseasonable Cold  Extreme Cold Wind Chill
+## 444 444              UNSEASONABLY COLD  Extreme Cold Wind Chill
+## 445 445              UNSEASONABLY WARM                     Heat
+## 446 446      UNSEASONABLY WARM AND DRY                     Heat
+## 447 447                UNSEASONAL RAIN               Heavy Rain
+## 448 448                URBAN AND SMALL                    Flood
+## 449 449 URBAN AND SMALL STREAM FLOODIN                    Flood
+## 450 450                    URBAN FLOOD                    Flood
+## 451 451                 URBAN FLOODING                    Flood
+## 452 452                   URBAN FLOODS                    Flood
+## 453 453                    URBAN SMALL                    Flood
+## 454 454             URBAN/SMALL STREAM                    Flood
+## 455 455       URBAN/SMALL STREAM FLOOD                    Flood
+## 456 456           URBAN/SML STREAM FLD                    Flood
+## 457 457                   VOLCANIC ASH             Volcanic Ash
+## 458 458                   WARM WEATHER                     Heat
+## 459 459                     WATERSPOUT               Waterspout
+## 460 460                    WATERSPOUT-               Waterspout
+## 461 461             WATERSPOUT-TORNADO               Waterspout
+## 462 462             WATERSPOUT TORNADO               Waterspout
+## 463 463            WATERSPOUT/ TORNADO               Waterspout
+## 464 464             WATERSPOUT/TORNADO               Waterspout
+## 465 465                 WET MICROBURST               Waterspout
+## 466 466                      Whirlwind                High Wind
+## 467 467                      WHIRLWIND                High Wind
+## 468 468                     WILD FIRES                 Wildfire
+## 469 469               WILD/FOREST FIRE                 Wildfire
+## 470 470              WILD/FOREST FIRES                 Wildfire
+## 471 471                       WILDFIRE                 Wildfire
+## 472 472                      WILDFIRES                 Wildfire
+## 473 473                           Wind              Strong Wind
+## 474 474                           WIND              Strong Wind
+## 475 475                  WIND AND WAVE              Strong Wind
+## 476 476                    Wind Damage              Strong Wind
+## 477 477                    WIND DAMAGE              Strong Wind
+## 478 478                     WIND STORM              Strong Wind
+## 479 479                      WIND/HAIL                     Hail
+## 480 480                          WINDS              Strong Wind
+## 481 481                   WINTER STORM             Winter Storm
+## 482 482        WINTER STORM HIGH WINDS             Winter Storm
+## 483 483                  WINTER STORMS             Winter Storm
+## 484 484                 WINTER WEATHER           Winter Weather
+## 485 485             WINTER WEATHER MIX           Winter Weather
+## 486 486             WINTER WEATHER/MIX           Winter Weather
+## 487 487                     Wintry Mix           Winter Weather
+## 488 488                     WINTRY MIX           Winter Weather</code></pre>
+<p>After that, the values of <code>EVTYPE</code> are replaced using the data in <code>new_event_types</code>:</p>
 </div>
 <div id="results" class="section level2">
 <h2>Results</h2>

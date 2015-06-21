@@ -1,0 +1,60 @@
+---
+title: "NOAA Storm Database Analysis"
+author: "Xavier Gutierrez"
+date: "Thursday, June 18, 2015"
+output: html_document
+---
+
+# Title
+
+## Synopsis
+
+The purpose of the analysis is to answer two questions using the storm data from the National Weather Service. The questions are:
+1. Across the United States, which types of events (as indicated in the EVTYPE variable) are most harmful with respect to population health?
+2. Across the United States, which types of events have the greatest economic consequences?
+In order to do that, the file provided in the course website will be used as a data source. The file can be found under the following URL at the moment of performing this analysis:
+        https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2
+
+Note that both questions start with "Across the United States", which I interpret in the way that the geography related information isn't relevant and can be summarized across (either by averaging or summing).
+
+## Data Processing
+
+Firstly, data will be downloaded from the internet, unzipped and loaded into R as a Data Frame. The following chunk of code will be cached due to the duration of both the download and the loading of the data. As the raw data file takes a long time to download, the code will check if it is already present and not download if that is the case. Also, this code chuk is cached so that, if the raw data are already loaded in memory, the data load operation is not repeated.
+
+```{r download_n_load, cache=TRUE}
+fileURL <- paste("https://d396qusza40orc.cloudfront.net/",
+              "repdata%2Fdata%2FStormData.csv.bz2",sep="")
+destFile <- "./repdata-StormData.csv.bz2"
+if (!file.exists(destFile)) {
+        download.file(fileURL,destFile)
+}
+NOAA_raw <- read.csv(destFile)
+```
+
+In order to prepare the data to be processed, a new data frame will be put together consisting only of the relevant columns for the analysis that needs to be performed. Otherwise, calculation times will be very long.
+Since we need to answer the two questions previously mentioned, we will reduce the data set to the columns `EVTYPE`, `FATALITIES` and `INJURIES` for the first question (population health related) and `PROPDMG` and `CROPDMG` in addition to `EVTYPE` for the second question (about economic consequences). The reason to exclude population related variables in the economic consequences is merely for simplicity purposes.
+
+This is the code that copies the desired columns into a new data frame. Package `dplyr` is used to summarize across the variables that are not required. Two new data frames are created as a result: `NOAA_econ` (with the data to be used for economic consequences analysis) and `NOAA_popu` (for the population health analysis).
+
+```{r pre_process, cache=TRUE}
+library(dplyr)
+p2_vars <- c("EVTYPE", "FATALITIES", "INJURIES", "PROPDMG", "CROPDMG")
+NOAA_P2 <- NOAA_raw[p2_vars] %>%
+        filter(FATALITIES != 0 | INJURIES != 0 | PROPDMG != 0 | CROPDMG != 0)
+
+NOAA_econ <- NOAA_P2 %>% group_by(EVTYPE) %>% summarize(econ_cons = sum(PROPDMG + CROPDMG)) %>% arrange(desc(econ_cons))
+NOAA_popu <- NOAA_P2 %>% group_by(EVTYPE) %>% summarize(popul_health = sum(FATALITIES + INJURIES)) %>% arrange(desc(popul_health))
+```
+
+This still results in a high amount of observations (`r nrow(NOAA_popu)` for `NOAA_popu` and `r nrow(NOAA_econ)` for `NOAA_econ`). A quick glance at the data shows that this is a data cleanliness issue, with multiple different names for the same type of event.
+As an example, all these types correspond to thunderstorm damage:
+
+```{r evt_types, cache=TRUE}
+event_types <- sort(unique(as.factor(c(as.character(NOAA_popu$EVTYPE),
+                                       as.character(NOAA_econ$EVTYPE)))))
+thunderst <- event_types[grep("*THUNDERSTORM*|*TSTM*", event_types)]
+thunderst
+```
+
+
+## Results

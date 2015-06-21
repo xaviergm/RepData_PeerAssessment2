@@ -4,9 +4,6 @@ author: "Xavier Gutierrez"
 date: "Thursday, June 18, 2015"
 output: html_document
 ---
-
-# Title
-
 ## Synopsis
 
 The purpose of the analysis is to answer two questions using the storm data from the National Weather Service. The questions are:
@@ -45,8 +42,12 @@ p2_vars <- c("EVTYPE", "FATALITIES", "INJURIES", "PROPDMG", "CROPDMG")
 NOAA_P2 <- NOAA_raw[p2_vars] %>%
         filter(FATALITIES != 0 | INJURIES != 0 | PROPDMG != 0 | CROPDMG != 0)
 
-NOAA_econ <- NOAA_P2 %>% group_by(EVTYPE) %>% summarize(econ_cons = sum(PROPDMG + CROPDMG)) %>% arrange(desc(econ_cons))
-NOAA_popu <- NOAA_P2 %>% group_by(EVTYPE) %>% summarize(popul_health = sum(FATALITIES + INJURIES)) %>% arrange(desc(popul_health))
+NOAA_econ <- NOAA_P2 %>% group_by(EVTYPE) %>%
+        summarize(econ_cons = sum(PROPDMG + CROPDMG)) %>%
+        arrange(desc(econ_cons))
+NOAA_popu <- NOAA_P2 %>% group_by(EVTYPE) %>%
+        summarize(popul_health = sum(FATALITIES + INJURIES)) %>%
+        arrange(desc(popul_health))
 ```
 
 This still results in a high amount of observations (`r nrow(NOAA_popu)` for `NOAA_popu` and `r nrow(NOAA_econ)` for `NOAA_econ`). A quick glance at the data shows that this is a data cleanliness issue, with multiple different names for the same type of event.
@@ -58,7 +59,7 @@ event_types <- sort(unique(as.factor(c(as.character(NOAA_popu$EVTYPE),
 thunderst <- event_types[grep("*THUNDERSTORM*|*TSTM*", event_types,
                               ignore.case=TRUE)]
 ```
-As an example, all these types correspond to thunderstorm damage:   
+As an example, all these types correspond to thunderstorm damage (incomplete listing for example purposes):   
 ```{r example1, cache=TRUE}
 thunderst
 ```
@@ -69,7 +70,7 @@ write.csv(event_types, file = "event_types.csv")
 # Manual processing goes here in order to do the mapping of the 488 values to
 # the 48 standard from the .pdf document explaining the standard types.
 new_event_types <- read.csv("./new_evtype.csv", sep=";")
-new_event_types
+new_event_types %>% arrange(New_EVTYPE)
 ```
 
 After that, the values of `EVTYPE` are replaced using the data in `new_event_types`:
@@ -77,28 +78,80 @@ After that, the values of `EVTYPE` are replaced using the data in `new_event_typ
 ```{r replacement, cache=TRUE}
 NOAA_popu_new <- NOAA_popu
 NOAA_econ_new <- NOAA_econ
-#NOAA_popu_new$EVTYPE <- as.character(NOAA_popu$EVTYPE)
-#NOAA_econ_new$EVTYPE <- as.character(NOAA_econ$EVTYPE)
+NOAA_popu_new$EVTYPE <- as.character(NOAA_popu$EVTYPE)
+NOAA_econ_new$EVTYPE <- as.character(NOAA_econ$EVTYPE)
 for (i in 1:nrow(new_event_types)){
         c <- as.character(new_event_types[i,2])
 	d <- as.character(new_event_types[i,3])
-	NOAA_popu_new[which(as.character(NOAA_popu$EVTYPE) == c)] <- d
-        NOAA_econ_new[which(as.character(NOAA_econ$EVTYPE) == c)] <- d
+	for (j in 1:nrow(NOAA_econ)){
+                if (NOAA_econ_new[j,1] == c) {
+                        NOAA_econ_new[j,1] <- d
+                }
+        }
+        for (j in 1:nrow(NOAA_popu)){
+                if (NOAA_popu_new[j,1] == c) {
+                        NOAA_popu_new[j,1] <- d
+                }
+        }
 }
-NOAA_popu_new$EVTYPE <- as.factor(NOAA_popu_new$EVTYPE)
-NOAA_popu_new$EVTYPE <- as.factor(NOAA_popu_new$EVTYPE)
+
+NOAA_popu_new$popul_health <- as.numeric(NOAA_popu_new$popul_health)
+
+NOAA_econ_new$econ_cons <- as.numeric(NOAA_econ_new$econ_cons)
 ```
 
-Finally, the data frame is grouped again by `EVTYPE` and `summarize(sum())` is used to come to 48 observations in each table (`NOAA_popu_new` and `NOAA_econ_new`):   
+Finally, the data frame is grouped again by `EVTYPE` and `summarize(sum())` is used to come to less than or 48 observations in each table (`NOAA_popu_new` and `NOAA_econ_new`). This will depend on whether all 48 types of observations are present in the data set or not.   
 ```{r summary, cache=TRUE}
-NOAA_popu_final <- NOAA_popu_new %>% group_by(EVTYPE) %>% summarize(sum())
-NOAA_popu_final <- NOAA_popu_new %>% group_by(EVTYPE) %>% summarize(sum())
+NOAA_popu_final <- NOAA_popu_new %>% group_by(EVTYPE) %>%
+        summarize(popul_health=sum(popul_health)) %>% arrange(desc(popul_health))
+NOAA_econ_final <- NOAA_econ_new %>% group_by(EVTYPE) %>%
+        summarize(econ_cons=sum(econ_cons)) %>% arrange(desc(econ_cons))
 ```
 
-As expected, the number of observations in each table is:   
-* `NOAA_popu_final: {r nrow(NOAA_popu_final)}`
-* `NOAA_econ_final: {r nrow(NOAA_econ_final)}`
-
-
+The number of observations in each table is:   
+* `NOAA_popu_final:` `r nrow(NOAA_popu_final)`   
+* `NOAA_econ_final:` `r nrow(NOAA_econ_final)`   
+Which is consistent with 48 standard event types.
 
 ## Results
+
+Next, the answers to the two questions above will be answered by means of two bar plots.
+
+### Across the United States, which types of events (as indicated in the `EVTYPE` variable) are most harmful with respect to population health?
+
+For simplicity purposes, only the first 10 events are plotted.
+
+```{r plot1, cache=TRUE}
+library(ggplot2)
+ggplot(NOAA_popu_final[1:10,], aes(x=EVTYPE, y=popul_health)) +
+        geom_bar(stat = "identity") +
+        ggtitle("Fig.1. Events With Most Effect On Population Health") +
+        xlab("Event Type") + ylab("Fatalities + Injuries") + theme_minimal() +
+        theme(axis.text.x = element_text(angle = 90, hjust = 1)) + coord_flip()
+```
+
+Here is the information in tabular form:
+```{r result1, cache=TRUE}
+NOAA_popu_final[1:10,]
+```
+
+As can be seen both in the table and the plot, `r NOAA_popu_final[1,1]`, `r NOAA_popu_final[2,1]`, `r NOAA_popu_final[3,1]`, `r NOAA_popu_final[4,1]` and `r NOAA_popu_final[5,1]` are the five events most harmful for population health.
+
+### Across the United States, which types of events have the greatest economic consequences?
+
+As in the previous case, only the 10 first event types are plotted.
+```{r plot2, cache=TRUE}
+library(ggplot2)
+ggplot(NOAA_econ_final[1:10,], aes(x=EVTYPE, y=econ_cons)) +
+        geom_bar(stat = "identity") +
+        ggtitle("Fig.2. Events With Greatest Economic Consequences") +
+        xlab("Event Type") + ylab("Property + Crop Damage in kUSD") + theme_minimal() +
+        theme(axis.text.x = element_text(angle = 90, hjust = 1)) + coord_flip()
+```
+
+Here is the information in tabular form:   
+```{r result2, cache=TRUE}
+NOAA_econ_final[1:10,]
+```
+
+As can be seen both in the table and the plot, `r NOAA_econ_final[1,1]`, `r NOAA_econ_final[2,1]`, `r NOAA_econ_final[3,1]`, `r NOAA_econ_final[4,1]` and `r NOAA_econ_final[5,1]` are the five events having most consequences from an economic perspective.

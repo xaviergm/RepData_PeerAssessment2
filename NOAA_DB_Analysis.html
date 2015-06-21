@@ -67,8 +67,6 @@ img {
 </div>
 
 
-<div id="title" class="section level1">
-<h1>Title</h1>
 <div id="synopsis" class="section level2">
 <h2>Synopsis</h2>
 <p>The purpose of the analysis is to answer two questions using the storm data from the National Weather Service. The questions are: 1. Across the United States, which types of events (as indicated in the EVTYPE variable) are most harmful with respect to population health? 2. Across the United States, which types of events have the greatest economic consequences? In order to do that, the file provided in the course website will be used as a data source. The file can be found under the following URL at the moment of performing this analysis:<br /><a href="https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2">https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2</a></p>
@@ -87,29 +85,23 @@ if (!file.exists(destFile)) {
 NOAA_raw &lt;- read.csv(destFile)</code></pre>
 <p>In order to prepare the data to be processed, a new data frame will be put together consisting only of the relevant columns for the analysis that needs to be performed. Otherwise, calculation times will be very long. Since we need to answer the two questions previously mentioned, we will reduce the data set to the columns <code>EVTYPE</code>, <code>FATALITIES</code> and <code>INJURIES</code> for the first question (population health related) and <code>PROPDMG</code> and <code>CROPDMG</code> in addition to <code>EVTYPE</code> for the second question (about economic consequences). The reason to exclude population related variables in the economic consequences is merely for simplicity purposes.</p>
 <p>This is the code that copies the desired columns into a new data frame. Package <code>dplyr</code> is used to summarize across the variables that are not required. Two new data frames are created as a result: <code>NOAA_econ</code> (with the data to be used for economic consequences analysis) and <code>NOAA_popu</code> (for the population health analysis).</p>
-<pre class="r"><code>library(dplyr)</code></pre>
-<pre><code>## 
-## Attaching package: 'dplyr'
-## 
-## The following object is masked from 'package:stats':
-## 
-##     filter
-## 
-## The following objects are masked from 'package:base':
-## 
-##     intersect, setdiff, setequal, union</code></pre>
-<pre class="r"><code>p2_vars &lt;- c(&quot;EVTYPE&quot;, &quot;FATALITIES&quot;, &quot;INJURIES&quot;, &quot;PROPDMG&quot;, &quot;CROPDMG&quot;)
+<pre class="r"><code>library(dplyr)
+p2_vars &lt;- c(&quot;EVTYPE&quot;, &quot;FATALITIES&quot;, &quot;INJURIES&quot;, &quot;PROPDMG&quot;, &quot;CROPDMG&quot;)
 NOAA_P2 &lt;- NOAA_raw[p2_vars] %&gt;%
         filter(FATALITIES != 0 | INJURIES != 0 | PROPDMG != 0 | CROPDMG != 0)
 
-NOAA_econ &lt;- NOAA_P2 %&gt;% group_by(EVTYPE) %&gt;% summarize(econ_cons = sum(PROPDMG + CROPDMG)) %&gt;% arrange(desc(econ_cons))
-NOAA_popu &lt;- NOAA_P2 %&gt;% group_by(EVTYPE) %&gt;% summarize(popul_health = sum(FATALITIES + INJURIES)) %&gt;% arrange(desc(popul_health))</code></pre>
+NOAA_econ &lt;- NOAA_P2 %&gt;% group_by(EVTYPE) %&gt;%
+        summarize(econ_cons = sum(PROPDMG + CROPDMG)) %&gt;%
+        arrange(desc(econ_cons))
+NOAA_popu &lt;- NOAA_P2 %&gt;% group_by(EVTYPE) %&gt;%
+        summarize(popul_health = sum(FATALITIES + INJURIES)) %&gt;%
+        arrange(desc(popul_health))</code></pre>
 <p>This still results in a high amount of observations (488 for <code>NOAA_popu</code> and 488 for <code>NOAA_econ</code>). A quick glance at the data shows that this is a data cleanliness issue, with multiple different names for the same type of event.</p>
 <pre class="r"><code>event_types &lt;- sort(unique(as.factor(c(as.character(NOAA_popu$EVTYPE),
                                        as.character(NOAA_econ$EVTYPE)))))
 thunderst &lt;- event_types[grep(&quot;*THUNDERSTORM*|*TSTM*&quot;, event_types,
                               ignore.case=TRUE)]</code></pre>
-<p>As an example, all these types correspond to thunderstorm damage:</p>
+<p>As an example, all these types correspond to thunderstorm damage (incomplete listing for example purposes):</p>
 <pre class="r"><code>thunderst</code></pre>
 <pre><code>##  [1]  TSTM WIND                      TSTM WIND (G45)              
 ##  [3] FLASH FLOODING/THUNDERSTORM WI LIGHTNING AND THUNDERSTORM WIN
@@ -154,488 +146,488 @@ thunderst &lt;- event_types[grep(&quot;*THUNDERSTORM*|*TSTM*&quot;, event_types,
 # Manual processing goes here in order to do the mapping of the 488 values to
 # the 48 standard from the .pdf document explaining the standard types.
 new_event_types &lt;- read.csv(&quot;./new_evtype.csv&quot;, sep=&quot;;&quot;)
-new_event_types</code></pre>
+new_event_types %&gt;% arrange(New_EVTYPE)</code></pre>
 <pre><code>##      ID                         EVTYPE               New_EVTYPE
-## 1     1             HIGH SURF ADVISORY                High Surf
-## 2     2                    FLASH FLOOD              Flash Flood
-## 3     3                      TSTM WIND        Thunderstorm Wind
-## 4     4                TSTM WIND (G45)        Thunderstorm Wind
-## 5     5                              ?                    Other
-## 6     6            AGRICULTURAL FREEZE             Frost Freeze
-## 7     7                  APACHE COUNTY                    Other
-## 8     8         ASTRONOMICAL HIGH TIDE            Coastal Flood
-## 9     9          ASTRONOMICAL LOW TIDE    Astronomical Low Tide
-## 10   10                       AVALANCE                Avalanche
-## 11   11                      AVALANCHE                Avalanche
-## 12   12                  Beach Erosion            Coastal Flood
-## 13   13                      BLACK ICE             Frost Freeze
-## 14   14                       BLIZZARD                 Blizzard
-## 15   15          BLIZZARD/WINTER STORM                 Blizzard
-## 16   16                   BLOWING DUST               Dust Storm
-## 17   17                   blowing snow               Heavy Snow
-## 18   18                   BLOWING SNOW               Heavy Snow
-## 19   19               BREAKUP FLOODING                    Flood
-## 20   20                     BRUSH FIRE                 Wildfire
-## 21   21      COASTAL  FLOODING/EROSION            Coastal Flood
-## 22   22                COASTAL EROSION            Coastal Flood
-## 23   23                  Coastal Flood            Coastal Flood
-## 24   24                  COASTAL FLOOD            Coastal Flood
-## 25   25               Coastal Flooding            Coastal Flood
-## 26   26               COASTAL FLOODING            Coastal Flood
-## 27   27       COASTAL FLOODING/EROSION            Coastal Flood
-## 28   28                  Coastal Storm         Storm Surge Tide
-## 29   29                  COASTAL STORM         Storm Surge Tide
-## 30   30                  COASTAL SURGE         Storm Surge Tide
-## 31   31                   COASTALSTORM         Storm Surge Tide
-## 32   32                           Cold          Cold Wind Chill
-## 33   33                           COLD          Cold Wind Chill
-## 34   34               COLD AIR TORNADO                  Tornado
-## 35   35                  COLD AND SNOW               Heavy Snow
-## 36   36        COLD AND WET CONDITIONS          Cold Wind Chill
-## 37   37               Cold Temperature          Cold Wind Chill
-## 38   38                      COLD WAVE          Cold Wind Chill
-## 39   39                   COLD WEATHER          Cold Wind Chill
-## 40   40                COLD/WIND CHILL          Cold Wind Chill
-## 41   41                     COLD/WINDS          Cold Wind Chill
-## 42   42                   COOL AND WET               Heavy Rain
-## 43   43                      DAM BREAK                    Other
-## 44   44                Damaging Freeze             Frost Freeze
-## 45   45                DAMAGING FREEZE             Frost Freeze
-## 46   46                      DENSE FOG                Dense Fog
-## 47   47                    DENSE SMOKE              Dense Smoke
-## 48   48                      DOWNBURST                High Wind
-## 49   49                        DROUGHT                  Drought
-## 50   50         DROUGHT/EXCESSIVE HEAT                     Heat
-## 51   51                       DROWNING                    Other
-## 52   52                 DRY MICROBURST                High Wind
-## 53   53           DRY MIRCOBURST WINDS                High Wind
-## 54   54                     Dust Devil               Dust Devil
-## 55   55                     DUST DEVIL               Dust Devil
-## 56   56          DUST DEVIL WATERSPOUT               Dust Devil
-## 57   57                     DUST STORM               Dust Storm
-## 58   58          DUST STORM/HIGH WINDS               Dust Storm
-## 59   59                    Early Frost             Frost Freeze
-## 60   60             Erosion/Cstl Flood            Coastal Flood
-## 61   61                 EXCESSIVE HEAT                     Heat
-## 62   62             EXCESSIVE RAINFALL               Heavy Rain
-## 63   63                 EXCESSIVE SNOW               Heavy Snow
-## 64   64              EXCESSIVE WETNESS               Heavy Rain
-## 65   65                  Extended Cold          Cold Wind Chill
-## 66   66                   Extreme Cold  Extreme Cold Wind Chill
-## 67   67                   EXTREME COLD  Extreme Cold Wind Chill
-## 68   68        EXTREME COLD/WIND CHILL  Extreme Cold Wind Chill
-## 69   69                   EXTREME HEAT                     Heat
-## 70   70             EXTREME WIND CHILL  Extreme Cold Wind Chill
-## 71   71              EXTREME WINDCHILL  Extreme Cold Wind Chill
-## 72   72               FALLING SNOW/ICE               Heavy Snow
+## 1     9          ASTRONOMICAL LOW TIDE    Astronomical Low Tide
+## 2    10                       AVALANCE                Avalanche
+## 3    11                      AVALANCHE                Avalanche
+## 4   247                      LANDSLIDE                Avalanche
+## 5   248                     LANDSLIDES                Avalanche
+## 6   249                      Landslump                Avalanche
+## 7   250                      LANDSPOUT                Avalanche
+## 8   284                      MUD SLIDE                Avalanche
+## 9   285                     MUD SLIDES                Avalanche
+## 10  287                       Mudslide                Avalanche
+## 11  288                       MUDSLIDE                Avalanche
+## 12  289                      Mudslides                Avalanche
+## 13  290                      MUDSLIDES                Avalanche
+## 14  313                     ROCK SLIDE                Avalanche
+## 15   14                       BLIZZARD                 Blizzard
+## 16   15          BLIZZARD/WINTER STORM                 Blizzard
+## 17  125                GROUND BLIZZARD                 Blizzard
+## 18  176            HEAVY SNOW/BLIZZARD                 Blizzard
+## 19  177  HEAVY SNOW/BLIZZARD/AVALANCHE                 Blizzard
+## 20  205             HIGH WIND/BLIZZARD                 Blizzard
+## 21    8         ASTRONOMICAL HIGH TIDE            Coastal Flood
+## 22   12                  Beach Erosion            Coastal Flood
+## 23   21      COASTAL  FLOODING/EROSION            Coastal Flood
+## 24   22                COASTAL EROSION            Coastal Flood
+## 25   23                  Coastal Flood            Coastal Flood
+## 26   24                  COASTAL FLOOD            Coastal Flood
+## 27   25               Coastal Flooding            Coastal Flood
+## 28   26               COASTAL FLOODING            Coastal Flood
+## 29   27       COASTAL FLOODING/EROSION            Coastal Flood
+## 30   60             Erosion/Cstl Flood            Coastal Flood
+## 31  168                     HEAVY SEAS            Coastal Flood
+## 32  188    HEAVY SURF COASTAL FLOODING            Coastal Flood
+## 33  191                           HIGH            Coastal Flood
+## 34  193                      HIGH SEAS            Coastal Flood
+## 35  196                    HIGH SWELLS            Coastal Flood
+## 36  197                     HIGH TIDES            Coastal Flood
+## 37  198                     HIGH WATER            Coastal Flood
+## 38  405                 Tidal Flooding            Coastal Flood
+## 39  406                 TIDAL FLOODING            Coastal Flood
+## 40   32                           Cold          Cold Wind Chill
+## 41   33                           COLD          Cold Wind Chill
+## 42   36        COLD AND WET CONDITIONS          Cold Wind Chill
+## 43   37               Cold Temperature          Cold Wind Chill
+## 44   38                      COLD WAVE          Cold Wind Chill
+## 45   39                   COLD WEATHER          Cold Wind Chill
+## 46   40                COLD/WIND CHILL          Cold Wind Chill
+## 47   41                     COLD/WINDS          Cold Wind Chill
+## 48   65                  Extended Cold          Cold Wind Chill
+## 49   99      FOG AND COLD TEMPERATURES          Cold Wind Chill
+## 50  227                    HYPOTHERMIA          Cold Wind Chill
+## 51  228           Hypothermia/Exposure          Cold Wind Chill
+## 52  229           HYPOTHERMIA/EXPOSURE          Cold Wind Chill
+## 53  268                LOW TEMPERATURE          Cold Wind Chill
+## 54   46                      DENSE FOG                Dense Fog
+## 55   98                            FOG                Dense Fog
+## 56   47                    DENSE SMOKE              Dense Smoke
+## 57   49                        DROUGHT                  Drought
+## 58   54                     Dust Devil               Dust Devil
+## 59   55                     DUST DEVIL               Dust Devil
+## 60   56          DUST DEVIL WATERSPOUT               Dust Devil
+## 61   16                   BLOWING DUST               Dust Storm
+## 62   57                     DUST STORM               Dust Storm
+## 63   58          DUST STORM/HIGH WINDS               Dust Storm
+## 64   66                   Extreme Cold  Extreme Cold Wind Chill
+## 65   67                   EXTREME COLD  Extreme Cold Wind Chill
+## 66   68        EXTREME COLD/WIND CHILL  Extreme Cold Wind Chill
+## 67   70             EXTREME WIND CHILL  Extreme Cold Wind Chill
+## 68   71              EXTREME WINDCHILL  Extreme Cold Wind Chill
+## 69  301                    RECORD COLD  Extreme Cold Wind Chill
+## 70  443              Unseasonable Cold  Extreme Cold Wind Chill
+## 71  444              UNSEASONABLY COLD  Extreme Cold Wind Chill
+## 72    2                    FLASH FLOOD              Flash Flood
 ## 73   73                    FLASH FLOOD              Flash Flood
-## 74   74       FLASH FLOOD - HEAVY RAIN               Heavy Rain
-## 75   75      FLASH FLOOD FROM ICE JAMS              Flash Flood
-## 76   76         FLASH FLOOD LANDSLIDES              Flash Flood
-## 77   77              FLASH FLOOD WINDS              Flash Flood
-## 78   78                   FLASH FLOOD/              Flash Flood
-## 79   79            FLASH FLOOD/ STREET              Flash Flood
-## 80   80              FLASH FLOOD/FLOOD              Flash Flood
-## 81   81          FLASH FLOOD/LANDSLIDE              Flash Flood
-## 82   82                 FLASH FLOODING              Flash Flood
-## 83   83           FLASH FLOODING/FLOOD              Flash Flood
-## 84   84 FLASH FLOODING/THUNDERSTORM WI              Flash Flood
-## 85   85                   FLASH FLOODS              Flash Flood
-## 86   86                          FLOOD                    Flood
-## 87   87             FLOOD &amp; HEAVY RAIN               Heavy Rain
-## 88   88                    FLOOD FLASH              Flash Flood
-## 89   89                    FLOOD/FLASH              Flash Flood
-## 90   90              FLOOD/FLASH FLOOD              Flash Flood
-## 91   91              FLOOD/FLASH/FLOOD              Flash Flood
-## 92   92               FLOOD/FLASHFLOOD              Flash Flood
-## 93   93               FLOOD/RAIN/WINDS               Heavy Rain
-## 94   94              FLOOD/RIVER FLOOD                    Flood
-## 95   95                       FLOODING                    Flood
-## 96   96            FLOODING/HEAVY RAIN               Heavy Rain
-## 97   97                         FLOODS                    Flood
-## 98   98                            FOG                Dense Fog
-## 99   99      FOG AND COLD TEMPERATURES          Cold Wind Chill
-## 100 100                   FOREST FIRES                 Wildfire
-## 101 101                         Freeze             Frost Freeze
-## 102 102                         FREEZE             Frost Freeze
-## 103 103               Freezing drizzle                    Sleet
-## 104 104               Freezing Drizzle                    Sleet
-## 105 105               FREEZING DRIZZLE                    Sleet
-## 106 106                   FREEZING FOG             Freezing Fog
-## 107 107                  Freezing Rain               Heavy Rain
-## 108 108                  FREEZING RAIN               Heavy Rain
-## 109 109            FREEZING RAIN/SLEET               Heavy Rain
-## 110 110             FREEZING RAIN/SNOW               Heavy Rain
-## 111 111                 Freezing Spray                    Sleet
-## 112 112                          FROST             Frost Freeze
-## 113 113                   Frost/Freeze             Frost Freeze
-## 114 114                   FROST/FREEZE             Frost Freeze
-## 115 115                  FROST\\FREEZE             Frost Freeze
-## 116 116                   FUNNEL CLOUD             Funnel Cloud
-## 117 117                          Glaze                    Sleet
-## 118 118                          GLAZE                    Sleet
-## 119 119                      GLAZE ICE                    Sleet
-## 120 120                GLAZE/ICE STORM                    Sleet
-## 121 121                  gradient wind                High Wind
-## 122 122                  Gradient wind                High Wind
-## 123 123                  GRADIENT WIND                High Wind
-## 124 124                    GRASS FIRES                 Wildfire
-## 125 125                GROUND BLIZZARD                 Blizzard
-## 126 126                       GUSTNADO                  Tornado
-## 127 127                     GUSTY WIND                High Wind
-## 128 128                GUSTY WIND/HAIL                     Hail
-## 129 129            GUSTY WIND/HVY RAIN               Heavy Rain
-## 130 130                Gusty wind/rain               Heavy Rain
-## 131 131                    Gusty winds                High Wind
-## 132 132                    Gusty Winds                High Wind
-## 133 133                    GUSTY WINDS                High Wind
-## 134 134                           HAIL                     Hail
-## 135 135                      HAIL 0.75                     Hail
-## 136 136                       HAIL 075                     Hail
-## 137 137                       HAIL 100                     Hail
-## 138 138                       HAIL 125                     Hail
-## 139 139                       HAIL 150                     Hail
-## 140 140                       HAIL 175                     Hail
-## 141 141                       HAIL 200                     Hail
-## 142 142                       HAIL 275                     Hail
-## 143 143                       HAIL 450                     Hail
-## 144 144                        HAIL 75                     Hail
-## 145 145                    HAIL DAMAGE                     Hail
-## 146 146                      HAIL/WIND                     Hail
-## 147 147                     HAIL/WINDS                     Hail
-## 148 148                      HAILSTORM                     Hail
-## 149 149                    HARD FREEZE             Frost Freeze
-## 150 150                 HAZARDOUS SURF                High Surf
-## 151 151                           HEAT                     Heat
-## 152 152                      Heat Wave                     Heat
-## 153 153                      HEAT WAVE                     Heat
-## 154 154              HEAT WAVE DROUGHT                     Heat
-## 155 155                     HEAT WAVES                     Heat
-## 156 156                HEAVY LAKE SNOW         Lake-Effect Snow
-## 157 157                      HEAVY MIX               Heavy Rain
-## 158 158            HEAVY PRECIPITATION               Heavy Rain
-## 159 159                     HEAVY RAIN               Heavy Rain
-## 160 160           HEAVY RAIN AND FLOOD               Heavy Rain
-## 161 161           Heavy Rain/High Surf               Heavy Rain
-## 162 162           HEAVY RAIN/LIGHTNING               Heavy Rain
-## 163 163      HEAVY RAIN/SEVERE WEATHER               Heavy Rain
-## 164 164  HEAVY RAIN/SMALL STREAM URBAN               Heavy Rain
-## 165 165                HEAVY RAIN/SNOW               Heavy Rain
-## 166 166                    HEAVY RAINS               Heavy Rain
-## 167 167           HEAVY RAINS/FLOODING               Heavy Rain
-## 168 168                     HEAVY SEAS            Coastal Flood
-## 169 169                   HEAVY SHOWER               Heavy Rain
-## 170 170                     HEAVY SNOW               Heavy Snow
-## 171 171             HEAVY SNOW-SQUALLS               Heavy Snow
-## 172 172      HEAVY SNOW AND HIGH WINDS               Heavy Snow
-## 173 173    HEAVY SNOW AND STRONG WINDS               Heavy Snow
-## 174 174              Heavy snow shower               Heavy Snow
-## 175 175             HEAVY SNOW SQUALLS               Heavy Snow
-## 176 176            HEAVY SNOW/BLIZZARD                 Blizzard
-## 177 177  HEAVY SNOW/BLIZZARD/AVALANCHE                 Blizzard
-## 178 178       HEAVY SNOW/FREEZING RAIN               Heavy Rain
-## 179 179  HEAVY SNOW/HIGH WINDS &amp; FLOOD               Heavy Snow
-## 180 180                 HEAVY SNOW/ICE               Heavy Snow
-## 181 181             HEAVY SNOW/SQUALLS               Heavy Snow
-## 182 182                HEAVY SNOW/WIND               Heavy Snow
-## 183 183        HEAVY SNOW/WINTER STORM               Heavy Snow
-## 184 184                 HEAVY SNOWPACK               Heavy Snow
-## 185 185                     Heavy Surf                High Surf
-## 186 186                     HEAVY SURF                High Surf
-## 187 187            Heavy surf and wind                High Surf
-## 188 188    HEAVY SURF COASTAL FLOODING            Coastal Flood
-## 189 189           HEAVY SURF/HIGH SURF                High Surf
-## 190 190                   HEAVY SWELLS                    Flood
-## 191 191                           HIGH            Coastal Flood
-## 192 192                    HIGH  WINDS                High Wind
-## 193 193                      HIGH SEAS            Coastal Flood
-## 194 194                      High Surf                High Surf
-## 195 195                      HIGH SURF                High Surf
-## 196 196                    HIGH SWELLS            Coastal Flood
-## 197 197                     HIGH TIDES            Coastal Flood
-## 198 198                     HIGH WATER            Coastal Flood
-## 199 199                     HIGH WAVES                High Surf
-## 200 200                      HIGH WIND                High Wind
-## 201 201                HIGH WIND (G40)                High Wind
-## 202 202                   HIGH WIND 48                High Wind
-## 203 203             HIGH WIND AND SEAS                High Wind
-## 204 204               HIGH WIND DAMAGE                High Wind
-## 205 205             HIGH WIND/BLIZZARD                 Blizzard
-## 206 206           HIGH WIND/HEAVY SNOW                High Wind
-## 207 207                 HIGH WIND/SEAS                High Wind
-## 208 208                     HIGH WINDS                High Wind
-## 209 209         HIGH WINDS HEAVY RAINS                High Wind
-## 210 210                    HIGH WINDS/                High Wind
-## 211 211       HIGH WINDS/COASTAL FLOOD                High Wind
-## 212 212                HIGH WINDS/COLD                High Wind
-## 213 213          HIGH WINDS/HEAVY RAIN                High Wind
-## 214 214                HIGH WINDS/SNOW                High Wind
-## 215 215                      HURRICANE      Hurricane (Typhoon)
-## 216 216     HURRICANE-GENERATED SWELLS      Hurricane (Typhoon)
-## 217 217              Hurricane Edouard      Hurricane (Typhoon)
-## 218 218                HURRICANE EMILY      Hurricane (Typhoon)
-## 219 219                 HURRICANE ERIN      Hurricane (Typhoon)
-## 220 220                HURRICANE FELIX      Hurricane (Typhoon)
-## 221 221               HURRICANE GORDON      Hurricane (Typhoon)
-## 222 222                 HURRICANE OPAL      Hurricane (Typhoon)
-## 223 223      HURRICANE OPAL/HIGH WINDS      Hurricane (Typhoon)
-## 224 224              HURRICANE/TYPHOON      Hurricane (Typhoon)
-## 225 225                       HVY RAIN               Heavy Rain
-## 226 226          HYPERTHERMIA/EXPOSURE                     Heat
-## 227 227                    HYPOTHERMIA          Cold Wind Chill
-## 228 228           Hypothermia/Exposure          Cold Wind Chill
-## 229 229           HYPOTHERMIA/EXPOSURE          Cold Wind Chill
-## 230 230                            ICE             Frost Freeze
-## 231 231                   ICE AND SNOW               Heavy Snow
-## 232 232                      ICE FLOES             Frost Freeze
-## 233 233                        ICE JAM             Frost Freeze
-## 234 234           Ice jam flood (minor                    Flood
-## 235 235               ICE JAM FLOODING                    Flood
-## 236 236                    ICE ON ROAD             Frost Freeze
-## 237 237                      ICE ROADS             Frost Freeze
-## 238 238                      ICE STORM                Ice Storm
-## 239 239          ICE STORM/FLASH FLOOD              Flash Flood
-## 240 240               ICE/STRONG WINDS                High Wind
-## 241 241                      ICY ROADS             Frost Freeze
-## 242 242               LAKE-EFFECT SNOW         Lake-Effect Snow
-## 243 243               Lake Effect Snow         Lake-Effect Snow
-## 244 244               LAKE EFFECT SNOW         Lake-Effect Snow
-## 245 245                     LAKE FLOOD          Lakeshore Flood
-## 246 246                LAKESHORE FLOOD          Lakeshore Flood
-## 247 247                      LANDSLIDE                Avalanche
-## 248 248                     LANDSLIDES                Avalanche
-## 249 249                      Landslump                Avalanche
-## 250 250                      LANDSPOUT                Avalanche
-## 251 251               LATE SEASON SNOW               Heavy Snow
-## 252 252            LIGHT FREEZING RAIN               Heavy Rain
-## 253 253                     Light snow               Heavy Snow
-## 254 254                     Light Snow               Heavy Snow
-## 255 255                     LIGHT SNOW               Heavy Snow
-## 256 256                 Light Snowfall               Heavy Snow
-## 257 257                       LIGHTING                Lightning
-## 258 258                      LIGHTNING                Lightning
-## 259 259             LIGHTNING  WAUSEON                Lightning
-## 260 260       LIGHTNING AND HEAVY RAIN               Heavy Rain
-## 261 261 LIGHTNING AND THUNDERSTORM WIN        Thunderstorm Wind
-## 262 262                 LIGHTNING FIRE                Lightning
-## 263 263               LIGHTNING INJURY                Lightning
-## 264 264   LIGHTNING THUNDERSTORM WINDS        Thunderstorm Wind
-## 265 265                     LIGHTNING.                Lightning
-## 266 266           LIGHTNING/HEAVY RAIN               Heavy Rain
-## 267 267                      LIGNTNING                Lightning
-## 268 268                LOW TEMPERATURE          Cold Wind Chill
-## 269 269                    MAJOR FLOOD                    Flood
-## 270 270                Marine Accident                    Other
-## 271 271                    MARINE HAIL                     Hail
-## 272 272               MARINE HIGH WIND         Marine High Wind
-## 273 273                  MARINE MISHAP                    Other
-## 274 274             MARINE STRONG WIND       Marine Strong Wind
-## 275 275       MARINE THUNDERSTORM WIND Marine Thunderstorm Wind
-## 276 276               MARINE TSTM WIND Marine Thunderstorm Wind
-## 277 277                     Microburst                High Wind
-## 278 278                     MICROBURST                High Wind
-## 279 279               MICROBURST WINDS                High Wind
-## 280 280                 MINOR FLOODING                    Flood
-## 281 281                   MIXED PRECIP               Heavy Rain
-## 282 282            Mixed Precipitation               Heavy Rain
-## 283 283            MIXED PRECIPITATION               Heavy Rain
-## 284 284                      MUD SLIDE                Avalanche
-## 285 285                     MUD SLIDES                Avalanche
-## 286 286      MUD SLIDES URBAN FLOODING                    Flood
-## 287 287                       Mudslide                Avalanche
-## 288 288                       MUDSLIDE                Avalanche
-## 289 289                      Mudslides                Avalanche
-## 290 290                      MUDSLIDES                Avalanche
-## 291 291         NON-SEVERE WIND DAMAGE                High Wind
-## 292 292                  NON-TSTM WIND                High Wind
-## 293 293                  NON TSTM WIND                High Wind
-## 294 294                          Other                    Other
-## 295 295                          OTHER                    Other
-## 296 296                           RAIN               Heavy Rain
-## 297 297                      RAIN/SNOW               Heavy Rain
-## 298 298                      RAIN/WIND               Heavy Rain
-## 299 299                      RAINSTORM               Heavy Rain
-## 300 300           RAPIDLY RISING WATER                    Flood
-## 301 301                    RECORD COLD  Extreme Cold Wind Chill
-## 302 302                    RECORD HEAT                     Heat
-## 303 303                RECORD RAINFALL               Heavy Rain
-## 304 304                    RECORD SNOW               Heavy Snow
-## 305 305          RECORD/EXCESSIVE HEAT                     Heat
-## 306 306                    RIP CURRENT              Rip Current
-## 307 307                   RIP CURRENTS              Rip Current
-## 308 308        RIP CURRENTS/HEAVY SURF                High Surf
-## 309 309         RIVER AND STREAM FLOOD                    Flood
-## 310 310                    RIVER FLOOD                    Flood
-## 311 311                 River Flooding                    Flood
-## 312 312                 RIVER FLOODING                    Flood
-## 313 313                     ROCK SLIDE                Avalanche
-## 314 314                     ROGUE WAVE                   Seiche
-## 315 315                     ROUGH SEAS                High Surf
-## 316 316                     ROUGH SURF                High Surf
-## 317 317                    RURAL FLOOD                    Flood
-## 318 318                         SEICHE                   Seiche
-## 319 319            SEVERE THUNDERSTORM        Thunderstorm Wind
-## 320 320      SEVERE THUNDERSTORM WINDS        Thunderstorm Wind
-## 321 321           SEVERE THUNDERSTORMS        Thunderstorm Wind
-## 322 322              SEVERE TURBULENCE        Thunderstorm Wind
-## 323 323                          SLEET                    Sleet
-## 324 324                SLEET/ICE STORM                    Sleet
-## 325 325                     SMALL HAIL                     Hail
-## 326 326             SMALL STREAM FLOOD                    Flood
-## 327 327                           Snow               Heavy Snow
-## 328 328                           SNOW               Heavy Snow
-## 329 329              SNOW ACCUMULATION               Heavy Snow
-## 330 330            SNOW AND HEAVY SNOW               Heavy Snow
-## 331 331                   SNOW AND ICE               Heavy Snow
-## 332 332             SNOW AND ICE STORM               Heavy Snow
-## 333 333             SNOW FREEZING RAIN               Heavy Rain
-## 334 334                    SNOW SQUALL               Heavy Snow
-## 335 335                   Snow Squalls               Heavy Snow
-## 336 336                   SNOW SQUALLS               Heavy Snow
-## 337 337              SNOW/ BITTER COLD               Heavy Snow
-## 338 338                      SNOW/ ICE               Heavy Snow
-## 339 339              SNOW/BLOWING SNOW               Heavy Snow
-## 340 340                      SNOW/COLD               Heavy Snow
-## 341 341             SNOW/FREEZING RAIN               Heavy Rain
-## 342 342                SNOW/HEAVY SNOW               Heavy Snow
-## 343 343                SNOW/HIGH WINDS               Heavy Snow
-## 344 344                       SNOW/ICE               Heavy Snow
-## 345 345                 SNOW/ICE STORM               Heavy Snow
-## 346 346                     SNOW/SLEET               Heavy Snow
-## 347 347       SNOW/SLEET/FREEZING RAIN               Heavy Rain
-## 348 348              SNOWMELT FLOODING                    Flood
-## 349 349              STORM FORCE WINDS        Thunderstorm Wind
-## 350 350                    STORM SURGE         Storm Surge Tide
-## 351 351               STORM SURGE/TIDE         Storm Surge Tide
-## 352 352                    Strong Wind              Strong Wind
-## 353 353                    STRONG WIND              Strong Wind
-## 354 354                   Strong Winds              Strong Wind
-## 355 355                   STRONG WINDS              Strong Wind
-## 356 356              THUDERSTORM WINDS        Thunderstorm Wind
-## 357 357            THUNDEERSTORM WINDS        Thunderstorm Wind
-## 358 358            THUNDERESTORM WINDS        Thunderstorm Wind
-## 359 359                    THUNDERSNOW        Thunderstorm Wind
-## 360 360                   THUNDERSTORM        Thunderstorm Wind
-## 361 361            THUNDERSTORM  WINDS        Thunderstorm Wind
-## 362 362         THUNDERSTORM DAMAGE TO        Thunderstorm Wind
-## 363 363              THUNDERSTORM HAIL        Thunderstorm Wind
-## 364 364              THUNDERSTORM WIND        Thunderstorm Wind
-## 365 365        THUNDERSTORM WIND (G40)        Thunderstorm Wind
-## 366 366       THUNDERSTORM WIND 60 MPH        Thunderstorm Wind
-## 367 367       THUNDERSTORM WIND 65 MPH        Thunderstorm Wind
-## 368 368        THUNDERSTORM WIND 65MPH        Thunderstorm Wind
-## 369 369       THUNDERSTORM WIND 98 MPH        Thunderstorm Wind
-## 370 370          THUNDERSTORM WIND G50        Thunderstorm Wind
-## 371 371          THUNDERSTORM WIND G52        Thunderstorm Wind
-## 372 372          THUNDERSTORM WIND G55        Thunderstorm Wind
-## 373 373          THUNDERSTORM WIND G60        Thunderstorm Wind
-## 374 374        THUNDERSTORM WIND TREES        Thunderstorm Wind
-## 375 375             THUNDERSTORM WIND.        Thunderstorm Wind
-## 376 376        THUNDERSTORM WIND/ TREE        Thunderstorm Wind
-## 377 377       THUNDERSTORM WIND/ TREES        Thunderstorm Wind
-## 378 378       THUNDERSTORM WIND/AWNING        Thunderstorm Wind
-## 379 379         THUNDERSTORM WIND/HAIL        Thunderstorm Wind
-## 380 380    THUNDERSTORM WIND/LIGHTNING        Thunderstorm Wind
-## 381 381             THUNDERSTORM WINDS        Thunderstorm Wind
-## 382 382          THUNDERSTORM WINDS 13        Thunderstorm Wind
-## 383 383      THUNDERSTORM WINDS 63 MPH        Thunderstorm Wind
-## 384 384         THUNDERSTORM WINDS AND        Thunderstorm Wind
-## 385 385         THUNDERSTORM WINDS G60        Thunderstorm Wind
-## 386 386        THUNDERSTORM WINDS HAIL        Thunderstorm Wind
-## 387 387   THUNDERSTORM WINDS LIGHTNING        Thunderstorm Wind
-## 388 388            THUNDERSTORM WINDS.        Thunderstorm Wind
-## 389 389      THUNDERSTORM WINDS/ FLOOD        Thunderstorm Wind
-## 390 390    THUNDERSTORM WINDS/FLOODING        Thunderstorm Wind
-## 391 391 THUNDERSTORM WINDS/FUNNEL CLOU        Thunderstorm Wind
-## 392 392        THUNDERSTORM WINDS/HAIL        Thunderstorm Wind
-## 393 393           THUNDERSTORM WINDS53        Thunderstorm Wind
-## 394 394         THUNDERSTORM WINDSHAIL        Thunderstorm Wind
-## 395 395            THUNDERSTORM WINDSS        Thunderstorm Wind
-## 396 396              THUNDERSTORM WINS        Thunderstorm Wind
-## 397 397                  THUNDERSTORMS        Thunderstorm Wind
-## 398 398             THUNDERSTORMS WIND        Thunderstorm Wind
-## 399 399            THUNDERSTORMS WINDS        Thunderstorm Wind
-## 400 400                  THUNDERSTORMW        Thunderstorm Wind
-## 401 401              THUNDERSTORMWINDS        Thunderstorm Wind
-## 402 402              THUNDERSTROM WIND        Thunderstorm Wind
-## 403 403              THUNDERTORM WINDS        Thunderstorm Wind
-## 404 404              THUNERSTORM WINDS        Thunderstorm Wind
-## 405 405                 Tidal Flooding            Coastal Flood
-## 406 406                 TIDAL FLOODING            Coastal Flood
-## 407 407                        TORNADO                  Tornado
-## 408 408                     TORNADO F0                  Tornado
-## 409 409                     TORNADO F1                  Tornado
-## 410 410                     TORNADO F2                  Tornado
-## 411 411                     TORNADO F3                  Tornado
-## 412 412                      TORNADOES                  Tornado
-## 413 413     TORNADOES, TSTM WIND, HAIL                  Tornado
-## 414 414                        TORNDAO                  Tornado
-## 415 415            Torrential Rainfall               Heavy Rain
-## 416 416            TROPICAL DEPRESSION      Tropical Depression
-## 417 417                 TROPICAL STORM           Tropical Storm
-## 418 418         TROPICAL STORM ALBERTO           Tropical Storm
-## 419 419            TROPICAL STORM DEAN           Tropical Storm
-## 420 420          TROPICAL STORM GORDON           Tropical Storm
-## 421 421           TROPICAL STORM JERRY           Tropical Storm
-## 422 422                      Tstm Wind        Thunderstorm Wind
-## 423 423                      TSTM WIND        Thunderstorm Wind
-## 424 424               TSTM WIND  (G45)        Thunderstorm Wind
-## 425 425                 TSTM WIND (41)        Thunderstorm Wind
-## 426 426                TSTM WIND (G35)        Thunderstorm Wind
-## 427 427                TSTM WIND (G40)        Thunderstorm Wind
-## 428 428                TSTM WIND (G45)        Thunderstorm Wind
-## 429 429                   TSTM WIND 40        Thunderstorm Wind
-## 430 430                   TSTM WIND 45        Thunderstorm Wind
-## 431 431                   TSTM WIND 55        Thunderstorm Wind
-## 432 432                  TSTM WIND 65)        Thunderstorm Wind
-## 433 433        TSTM WIND AND LIGHTNING        Thunderstorm Wind
-## 434 434               TSTM WIND DAMAGE        Thunderstorm Wind
-## 435 435                  TSTM WIND G45        Thunderstorm Wind
-## 436 436                  TSTM WIND G58        Thunderstorm Wind
-## 437 437                 TSTM WIND/HAIL        Thunderstorm Wind
-## 438 438                     TSTM WINDS        Thunderstorm Wind
-## 439 439                          TSTMW        Thunderstorm Wind
-## 440 440                        TSUNAMI                  Tsunami
-## 441 441               TUNDERSTORM WIND        Thunderstorm Wind
-## 442 442                        TYPHOON      Hurricane (Typhoon)
-## 443 443              Unseasonable Cold  Extreme Cold Wind Chill
-## 444 444              UNSEASONABLY COLD  Extreme Cold Wind Chill
-## 445 445              UNSEASONABLY WARM                     Heat
-## 446 446      UNSEASONABLY WARM AND DRY                     Heat
-## 447 447                UNSEASONAL RAIN               Heavy Rain
-## 448 448                URBAN AND SMALL                    Flood
-## 449 449 URBAN AND SMALL STREAM FLOODIN                    Flood
-## 450 450                    URBAN FLOOD                    Flood
-## 451 451                 URBAN FLOODING                    Flood
-## 452 452                   URBAN FLOODS                    Flood
-## 453 453                    URBAN SMALL                    Flood
-## 454 454             URBAN/SMALL STREAM                    Flood
-## 455 455       URBAN/SMALL STREAM FLOOD                    Flood
-## 456 456           URBAN/SML STREAM FLD                    Flood
-## 457 457                   VOLCANIC ASH             Volcanic Ash
-## 458 458                   WARM WEATHER                     Heat
-## 459 459                     WATERSPOUT               Waterspout
-## 460 460                    WATERSPOUT-               Waterspout
-## 461 461             WATERSPOUT-TORNADO               Waterspout
-## 462 462             WATERSPOUT TORNADO               Waterspout
-## 463 463            WATERSPOUT/ TORNADO               Waterspout
-## 464 464             WATERSPOUT/TORNADO               Waterspout
-## 465 465                 WET MICROBURST               Waterspout
-## 466 466                      Whirlwind                High Wind
-## 467 467                      WHIRLWIND                High Wind
-## 468 468                     WILD FIRES                 Wildfire
-## 469 469               WILD/FOREST FIRE                 Wildfire
-## 470 470              WILD/FOREST FIRES                 Wildfire
-## 471 471                       WILDFIRE                 Wildfire
-## 472 472                      WILDFIRES                 Wildfire
-## 473 473                           Wind              Strong Wind
-## 474 474                           WIND              Strong Wind
-## 475 475                  WIND AND WAVE              Strong Wind
-## 476 476                    Wind Damage              Strong Wind
-## 477 477                    WIND DAMAGE              Strong Wind
-## 478 478                     WIND STORM              Strong Wind
-## 479 479                      WIND/HAIL                     Hail
-## 480 480                          WINDS              Strong Wind
+## 74   75      FLASH FLOOD FROM ICE JAMS              Flash Flood
+## 75   76         FLASH FLOOD LANDSLIDES              Flash Flood
+## 76   77              FLASH FLOOD WINDS              Flash Flood
+## 77   78                   FLASH FLOOD/              Flash Flood
+## 78   79            FLASH FLOOD/ STREET              Flash Flood
+## 79   80              FLASH FLOOD/FLOOD              Flash Flood
+## 80   81          FLASH FLOOD/LANDSLIDE              Flash Flood
+## 81   82                 FLASH FLOODING              Flash Flood
+## 82   83           FLASH FLOODING/FLOOD              Flash Flood
+## 83   84 FLASH FLOODING/THUNDERSTORM WI              Flash Flood
+## 84   85                   FLASH FLOODS              Flash Flood
+## 85   88                    FLOOD FLASH              Flash Flood
+## 86   89                    FLOOD/FLASH              Flash Flood
+## 87   90              FLOOD/FLASH FLOOD              Flash Flood
+## 88   91              FLOOD/FLASH/FLOOD              Flash Flood
+## 89   92               FLOOD/FLASHFLOOD              Flash Flood
+## 90  239          ICE STORM/FLASH FLOOD              Flash Flood
+## 91   19               BREAKUP FLOODING                    Flood
+## 92   86                          FLOOD                    Flood
+## 93   94              FLOOD/RIVER FLOOD                    Flood
+## 94   95                       FLOODING                    Flood
+## 95   97                         FLOODS                    Flood
+## 96  190                   HEAVY SWELLS                    Flood
+## 97  234           Ice jam flood (minor                    Flood
+## 98  235               ICE JAM FLOODING                    Flood
+## 99  269                    MAJOR FLOOD                    Flood
+## 100 280                 MINOR FLOODING                    Flood
+## 101 286      MUD SLIDES URBAN FLOODING                    Flood
+## 102 300           RAPIDLY RISING WATER                    Flood
+## 103 309         RIVER AND STREAM FLOOD                    Flood
+## 104 310                    RIVER FLOOD                    Flood
+## 105 311                 River Flooding                    Flood
+## 106 312                 RIVER FLOODING                    Flood
+## 107 317                    RURAL FLOOD                    Flood
+## 108 326             SMALL STREAM FLOOD                    Flood
+## 109 348              SNOWMELT FLOODING                    Flood
+## 110 448                URBAN AND SMALL                    Flood
+## 111 449 URBAN AND SMALL STREAM FLOODIN                    Flood
+## 112 450                    URBAN FLOOD                    Flood
+## 113 451                 URBAN FLOODING                    Flood
+## 114 452                   URBAN FLOODS                    Flood
+## 115 453                    URBAN SMALL                    Flood
+## 116 454             URBAN/SMALL STREAM                    Flood
+## 117 455       URBAN/SMALL STREAM FLOOD                    Flood
+## 118 456           URBAN/SML STREAM FLD                    Flood
+## 119 106                   FREEZING FOG             Freezing Fog
+## 120   6            AGRICULTURAL FREEZE             Frost Freeze
+## 121  13                      BLACK ICE             Frost Freeze
+## 122  44                Damaging Freeze             Frost Freeze
+## 123  45                DAMAGING FREEZE             Frost Freeze
+## 124  59                    Early Frost             Frost Freeze
+## 125 101                         Freeze             Frost Freeze
+## 126 102                         FREEZE             Frost Freeze
+## 127 112                          FROST             Frost Freeze
+## 128 113                   Frost/Freeze             Frost Freeze
+## 129 114                   FROST/FREEZE             Frost Freeze
+## 130 115                  FROST\\FREEZE             Frost Freeze
+## 131 149                    HARD FREEZE             Frost Freeze
+## 132 230                            ICE             Frost Freeze
+## 133 232                      ICE FLOES             Frost Freeze
+## 134 233                        ICE JAM             Frost Freeze
+## 135 236                    ICE ON ROAD             Frost Freeze
+## 136 237                      ICE ROADS             Frost Freeze
+## 137 241                      ICY ROADS             Frost Freeze
+## 138 116                   FUNNEL CLOUD             Funnel Cloud
+## 139 128                GUSTY WIND/HAIL                     Hail
+## 140 134                           HAIL                     Hail
+## 141 135                      HAIL 0.75                     Hail
+## 142 136                       HAIL 075                     Hail
+## 143 137                       HAIL 100                     Hail
+## 144 138                       HAIL 125                     Hail
+## 145 139                       HAIL 150                     Hail
+## 146 140                       HAIL 175                     Hail
+## 147 141                       HAIL 200                     Hail
+## 148 142                       HAIL 275                     Hail
+## 149 143                       HAIL 450                     Hail
+## 150 144                        HAIL 75                     Hail
+## 151 145                    HAIL DAMAGE                     Hail
+## 152 146                      HAIL/WIND                     Hail
+## 153 147                     HAIL/WINDS                     Hail
+## 154 148                      HAILSTORM                     Hail
+## 155 271                    MARINE HAIL                     Hail
+## 156 325                     SMALL HAIL                     Hail
+## 157 479                      WIND/HAIL                     Hail
+## 158  50         DROUGHT/EXCESSIVE HEAT                     Heat
+## 159  61                 EXCESSIVE HEAT                     Heat
+## 160  69                   EXTREME HEAT                     Heat
+## 161 151                           HEAT                     Heat
+## 162 152                      Heat Wave                     Heat
+## 163 153                      HEAT WAVE                     Heat
+## 164 154              HEAT WAVE DROUGHT                     Heat
+## 165 155                     HEAT WAVES                     Heat
+## 166 226          HYPERTHERMIA/EXPOSURE                     Heat
+## 167 302                    RECORD HEAT                     Heat
+## 168 305          RECORD/EXCESSIVE HEAT                     Heat
+## 169 445              UNSEASONABLY WARM                     Heat
+## 170 446      UNSEASONABLY WARM AND DRY                     Heat
+## 171 458                   WARM WEATHER                     Heat
+## 172  42                   COOL AND WET               Heavy Rain
+## 173  62             EXCESSIVE RAINFALL               Heavy Rain
+## 174  64              EXCESSIVE WETNESS               Heavy Rain
+## 175  74       FLASH FLOOD - HEAVY RAIN               Heavy Rain
+## 176  87             FLOOD &amp; HEAVY RAIN               Heavy Rain
+## 177  93               FLOOD/RAIN/WINDS               Heavy Rain
+## 178  96            FLOODING/HEAVY RAIN               Heavy Rain
+## 179 107                  Freezing Rain               Heavy Rain
+## 180 108                  FREEZING RAIN               Heavy Rain
+## 181 109            FREEZING RAIN/SLEET               Heavy Rain
+## 182 110             FREEZING RAIN/SNOW               Heavy Rain
+## 183 129            GUSTY WIND/HVY RAIN               Heavy Rain
+## 184 130                Gusty wind/rain               Heavy Rain
+## 185 157                      HEAVY MIX               Heavy Rain
+## 186 158            HEAVY PRECIPITATION               Heavy Rain
+## 187 159                     HEAVY RAIN               Heavy Rain
+## 188 160           HEAVY RAIN AND FLOOD               Heavy Rain
+## 189 161           Heavy Rain/High Surf               Heavy Rain
+## 190 162           HEAVY RAIN/LIGHTNING               Heavy Rain
+## 191 163      HEAVY RAIN/SEVERE WEATHER               Heavy Rain
+## 192 164  HEAVY RAIN/SMALL STREAM URBAN               Heavy Rain
+## 193 165                HEAVY RAIN/SNOW               Heavy Rain
+## 194 166                    HEAVY RAINS               Heavy Rain
+## 195 167           HEAVY RAINS/FLOODING               Heavy Rain
+## 196 169                   HEAVY SHOWER               Heavy Rain
+## 197 178       HEAVY SNOW/FREEZING RAIN               Heavy Rain
+## 198 225                       HVY RAIN               Heavy Rain
+## 199 252            LIGHT FREEZING RAIN               Heavy Rain
+## 200 260       LIGHTNING AND HEAVY RAIN               Heavy Rain
+## 201 266           LIGHTNING/HEAVY RAIN               Heavy Rain
+## 202 281                   MIXED PRECIP               Heavy Rain
+## 203 282            Mixed Precipitation               Heavy Rain
+## 204 283            MIXED PRECIPITATION               Heavy Rain
+## 205 296                           RAIN               Heavy Rain
+## 206 297                      RAIN/SNOW               Heavy Rain
+## 207 298                      RAIN/WIND               Heavy Rain
+## 208 299                      RAINSTORM               Heavy Rain
+## 209 303                RECORD RAINFALL               Heavy Rain
+## 210 333             SNOW FREEZING RAIN               Heavy Rain
+## 211 341             SNOW/FREEZING RAIN               Heavy Rain
+## 212 347       SNOW/SLEET/FREEZING RAIN               Heavy Rain
+## 213 415            Torrential Rainfall               Heavy Rain
+## 214 447                UNSEASONAL RAIN               Heavy Rain
+## 215  17                   blowing snow               Heavy Snow
+## 216  18                   BLOWING SNOW               Heavy Snow
+## 217  35                  COLD AND SNOW               Heavy Snow
+## 218  63                 EXCESSIVE SNOW               Heavy Snow
+## 219  72               FALLING SNOW/ICE               Heavy Snow
+## 220 170                     HEAVY SNOW               Heavy Snow
+## 221 171             HEAVY SNOW-SQUALLS               Heavy Snow
+## 222 172      HEAVY SNOW AND HIGH WINDS               Heavy Snow
+## 223 173    HEAVY SNOW AND STRONG WINDS               Heavy Snow
+## 224 174              Heavy snow shower               Heavy Snow
+## 225 175             HEAVY SNOW SQUALLS               Heavy Snow
+## 226 179  HEAVY SNOW/HIGH WINDS &amp; FLOOD               Heavy Snow
+## 227 180                 HEAVY SNOW/ICE               Heavy Snow
+## 228 181             HEAVY SNOW/SQUALLS               Heavy Snow
+## 229 182                HEAVY SNOW/WIND               Heavy Snow
+## 230 183        HEAVY SNOW/WINTER STORM               Heavy Snow
+## 231 184                 HEAVY SNOWPACK               Heavy Snow
+## 232 231                   ICE AND SNOW               Heavy Snow
+## 233 251               LATE SEASON SNOW               Heavy Snow
+## 234 253                     Light snow               Heavy Snow
+## 235 254                     Light Snow               Heavy Snow
+## 236 255                     LIGHT SNOW               Heavy Snow
+## 237 256                 Light Snowfall               Heavy Snow
+## 238 304                    RECORD SNOW               Heavy Snow
+## 239 327                           Snow               Heavy Snow
+## 240 328                           SNOW               Heavy Snow
+## 241 329              SNOW ACCUMULATION               Heavy Snow
+## 242 330            SNOW AND HEAVY SNOW               Heavy Snow
+## 243 331                   SNOW AND ICE               Heavy Snow
+## 244 332             SNOW AND ICE STORM               Heavy Snow
+## 245 334                    SNOW SQUALL               Heavy Snow
+## 246 335                   Snow Squalls               Heavy Snow
+## 247 336                   SNOW SQUALLS               Heavy Snow
+## 248 337              SNOW/ BITTER COLD               Heavy Snow
+## 249 338                      SNOW/ ICE               Heavy Snow
+## 250 339              SNOW/BLOWING SNOW               Heavy Snow
+## 251 340                      SNOW/COLD               Heavy Snow
+## 252 342                SNOW/HEAVY SNOW               Heavy Snow
+## 253 343                SNOW/HIGH WINDS               Heavy Snow
+## 254 344                       SNOW/ICE               Heavy Snow
+## 255 345                 SNOW/ICE STORM               Heavy Snow
+## 256 346                     SNOW/SLEET               Heavy Snow
+## 257   1             HIGH SURF ADVISORY                High Surf
+## 258 150                 HAZARDOUS SURF                High Surf
+## 259 185                     Heavy Surf                High Surf
+## 260 186                     HEAVY SURF                High Surf
+## 261 187            Heavy surf and wind                High Surf
+## 262 189           HEAVY SURF/HIGH SURF                High Surf
+## 263 194                      High Surf                High Surf
+## 264 195                      HIGH SURF                High Surf
+## 265 199                     HIGH WAVES                High Surf
+## 266 308        RIP CURRENTS/HEAVY SURF                High Surf
+## 267 315                     ROUGH SEAS                High Surf
+## 268 316                     ROUGH SURF                High Surf
+## 269  48                      DOWNBURST                High Wind
+## 270  52                 DRY MICROBURST                High Wind
+## 271  53           DRY MIRCOBURST WINDS                High Wind
+## 272 121                  gradient wind                High Wind
+## 273 122                  Gradient wind                High Wind
+## 274 123                  GRADIENT WIND                High Wind
+## 275 127                     GUSTY WIND                High Wind
+## 276 131                    Gusty winds                High Wind
+## 277 132                    Gusty Winds                High Wind
+## 278 133                    GUSTY WINDS                High Wind
+## 279 192                    HIGH  WINDS                High Wind
+## 280 200                      HIGH WIND                High Wind
+## 281 201                HIGH WIND (G40)                High Wind
+## 282 202                   HIGH WIND 48                High Wind
+## 283 203             HIGH WIND AND SEAS                High Wind
+## 284 204               HIGH WIND DAMAGE                High Wind
+## 285 206           HIGH WIND/HEAVY SNOW                High Wind
+## 286 207                 HIGH WIND/SEAS                High Wind
+## 287 208                     HIGH WINDS                High Wind
+## 288 209         HIGH WINDS HEAVY RAINS                High Wind
+## 289 210                    HIGH WINDS/                High Wind
+## 290 211       HIGH WINDS/COASTAL FLOOD                High Wind
+## 291 212                HIGH WINDS/COLD                High Wind
+## 292 213          HIGH WINDS/HEAVY RAIN                High Wind
+## 293 214                HIGH WINDS/SNOW                High Wind
+## 294 240               ICE/STRONG WINDS                High Wind
+## 295 277                     Microburst                High Wind
+## 296 278                     MICROBURST                High Wind
+## 297 279               MICROBURST WINDS                High Wind
+## 298 291         NON-SEVERE WIND DAMAGE                High Wind
+## 299 292                  NON-TSTM WIND                High Wind
+## 300 293                  NON TSTM WIND                High Wind
+## 301 466                      Whirlwind                High Wind
+## 302 467                      WHIRLWIND                High Wind
+## 303 215                      HURRICANE      Hurricane (Typhoon)
+## 304 216     HURRICANE-GENERATED SWELLS      Hurricane (Typhoon)
+## 305 217              Hurricane Edouard      Hurricane (Typhoon)
+## 306 218                HURRICANE EMILY      Hurricane (Typhoon)
+## 307 219                 HURRICANE ERIN      Hurricane (Typhoon)
+## 308 220                HURRICANE FELIX      Hurricane (Typhoon)
+## 309 221               HURRICANE GORDON      Hurricane (Typhoon)
+## 310 222                 HURRICANE OPAL      Hurricane (Typhoon)
+## 311 223      HURRICANE OPAL/HIGH WINDS      Hurricane (Typhoon)
+## 312 224              HURRICANE/TYPHOON      Hurricane (Typhoon)
+## 313 442                        TYPHOON      Hurricane (Typhoon)
+## 314 238                      ICE STORM                Ice Storm
+## 315 156                HEAVY LAKE SNOW         Lake-Effect Snow
+## 316 242               LAKE-EFFECT SNOW         Lake-Effect Snow
+## 317 243               Lake Effect Snow         Lake-Effect Snow
+## 318 244               LAKE EFFECT SNOW         Lake-Effect Snow
+## 319 245                     LAKE FLOOD          Lakeshore Flood
+## 320 246                LAKESHORE FLOOD          Lakeshore Flood
+## 321 257                       LIGHTING                Lightning
+## 322 258                      LIGHTNING                Lightning
+## 323 259             LIGHTNING  WAUSEON                Lightning
+## 324 262                 LIGHTNING FIRE                Lightning
+## 325 263               LIGHTNING INJURY                Lightning
+## 326 265                     LIGHTNING.                Lightning
+## 327 267                      LIGNTNING                Lightning
+## 328 272               MARINE HIGH WIND         Marine High Wind
+## 329 274             MARINE STRONG WIND       Marine Strong Wind
+## 330 275       MARINE THUNDERSTORM WIND Marine Thunderstorm Wind
+## 331 276               MARINE TSTM WIND Marine Thunderstorm Wind
+## 332   5                              ?                    Other
+## 333   7                  APACHE COUNTY                    Other
+## 334  43                      DAM BREAK                    Other
+## 335  51                       DROWNING                    Other
+## 336 270                Marine Accident                    Other
+## 337 273                  MARINE MISHAP                    Other
+## 338 294                          Other                    Other
+## 339 295                          OTHER                    Other
+## 340 306                    RIP CURRENT              Rip Current
+## 341 307                   RIP CURRENTS              Rip Current
+## 342 314                     ROGUE WAVE                   Seiche
+## 343 318                         SEICHE                   Seiche
+## 344 103               Freezing drizzle                    Sleet
+## 345 104               Freezing Drizzle                    Sleet
+## 346 105               FREEZING DRIZZLE                    Sleet
+## 347 111                 Freezing Spray                    Sleet
+## 348 117                          Glaze                    Sleet
+## 349 118                          GLAZE                    Sleet
+## 350 119                      GLAZE ICE                    Sleet
+## 351 120                GLAZE/ICE STORM                    Sleet
+## 352 323                          SLEET                    Sleet
+## 353 324                SLEET/ICE STORM                    Sleet
+## 354  28                  Coastal Storm         Storm Surge Tide
+## 355  29                  COASTAL STORM         Storm Surge Tide
+## 356  30                  COASTAL SURGE         Storm Surge Tide
+## 357  31                   COASTALSTORM         Storm Surge Tide
+## 358 350                    STORM SURGE         Storm Surge Tide
+## 359 351               STORM SURGE/TIDE         Storm Surge Tide
+## 360 352                    Strong Wind              Strong Wind
+## 361 353                    STRONG WIND              Strong Wind
+## 362 354                   Strong Winds              Strong Wind
+## 363 355                   STRONG WINDS              Strong Wind
+## 364 473                           Wind              Strong Wind
+## 365 474                           WIND              Strong Wind
+## 366 475                  WIND AND WAVE              Strong Wind
+## 367 476                    Wind Damage              Strong Wind
+## 368 477                    WIND DAMAGE              Strong Wind
+## 369 478                     WIND STORM              Strong Wind
+## 370 480                          WINDS              Strong Wind
+## 371   3                      TSTM WIND        Thunderstorm Wind
+## 372   4                TSTM WIND (G45)        Thunderstorm Wind
+## 373 261 LIGHTNING AND THUNDERSTORM WIN        Thunderstorm Wind
+## 374 264   LIGHTNING THUNDERSTORM WINDS        Thunderstorm Wind
+## 375 319            SEVERE THUNDERSTORM        Thunderstorm Wind
+## 376 320      SEVERE THUNDERSTORM WINDS        Thunderstorm Wind
+## 377 321           SEVERE THUNDERSTORMS        Thunderstorm Wind
+## 378 322              SEVERE TURBULENCE        Thunderstorm Wind
+## 379 349              STORM FORCE WINDS        Thunderstorm Wind
+## 380 356              THUDERSTORM WINDS        Thunderstorm Wind
+## 381 357            THUNDEERSTORM WINDS        Thunderstorm Wind
+## 382 358            THUNDERESTORM WINDS        Thunderstorm Wind
+## 383 359                    THUNDERSNOW        Thunderstorm Wind
+## 384 360                   THUNDERSTORM        Thunderstorm Wind
+## 385 361            THUNDERSTORM  WINDS        Thunderstorm Wind
+## 386 362         THUNDERSTORM DAMAGE TO        Thunderstorm Wind
+## 387 363              THUNDERSTORM HAIL        Thunderstorm Wind
+## 388 364              THUNDERSTORM WIND        Thunderstorm Wind
+## 389 365        THUNDERSTORM WIND (G40)        Thunderstorm Wind
+## 390 366       THUNDERSTORM WIND 60 MPH        Thunderstorm Wind
+## 391 367       THUNDERSTORM WIND 65 MPH        Thunderstorm Wind
+## 392 368        THUNDERSTORM WIND 65MPH        Thunderstorm Wind
+## 393 369       THUNDERSTORM WIND 98 MPH        Thunderstorm Wind
+## 394 370          THUNDERSTORM WIND G50        Thunderstorm Wind
+## 395 371          THUNDERSTORM WIND G52        Thunderstorm Wind
+## 396 372          THUNDERSTORM WIND G55        Thunderstorm Wind
+## 397 373          THUNDERSTORM WIND G60        Thunderstorm Wind
+## 398 374        THUNDERSTORM WIND TREES        Thunderstorm Wind
+## 399 375             THUNDERSTORM WIND.        Thunderstorm Wind
+## 400 376        THUNDERSTORM WIND/ TREE        Thunderstorm Wind
+## 401 377       THUNDERSTORM WIND/ TREES        Thunderstorm Wind
+## 402 378       THUNDERSTORM WIND/AWNING        Thunderstorm Wind
+## 403 379         THUNDERSTORM WIND/HAIL        Thunderstorm Wind
+## 404 380    THUNDERSTORM WIND/LIGHTNING        Thunderstorm Wind
+## 405 381             THUNDERSTORM WINDS        Thunderstorm Wind
+## 406 382          THUNDERSTORM WINDS 13        Thunderstorm Wind
+## 407 383      THUNDERSTORM WINDS 63 MPH        Thunderstorm Wind
+## 408 384         THUNDERSTORM WINDS AND        Thunderstorm Wind
+## 409 385         THUNDERSTORM WINDS G60        Thunderstorm Wind
+## 410 386        THUNDERSTORM WINDS HAIL        Thunderstorm Wind
+## 411 387   THUNDERSTORM WINDS LIGHTNING        Thunderstorm Wind
+## 412 388            THUNDERSTORM WINDS.        Thunderstorm Wind
+## 413 389      THUNDERSTORM WINDS/ FLOOD        Thunderstorm Wind
+## 414 390    THUNDERSTORM WINDS/FLOODING        Thunderstorm Wind
+## 415 391 THUNDERSTORM WINDS/FUNNEL CLOU        Thunderstorm Wind
+## 416 392        THUNDERSTORM WINDS/HAIL        Thunderstorm Wind
+## 417 393           THUNDERSTORM WINDS53        Thunderstorm Wind
+## 418 394         THUNDERSTORM WINDSHAIL        Thunderstorm Wind
+## 419 395            THUNDERSTORM WINDSS        Thunderstorm Wind
+## 420 396              THUNDERSTORM WINS        Thunderstorm Wind
+## 421 397                  THUNDERSTORMS        Thunderstorm Wind
+## 422 398             THUNDERSTORMS WIND        Thunderstorm Wind
+## 423 399            THUNDERSTORMS WINDS        Thunderstorm Wind
+## 424 400                  THUNDERSTORMW        Thunderstorm Wind
+## 425 401              THUNDERSTORMWINDS        Thunderstorm Wind
+## 426 402              THUNDERSTROM WIND        Thunderstorm Wind
+## 427 403              THUNDERTORM WINDS        Thunderstorm Wind
+## 428 404              THUNERSTORM WINDS        Thunderstorm Wind
+## 429 422                      Tstm Wind        Thunderstorm Wind
+## 430 423                      TSTM WIND        Thunderstorm Wind
+## 431 424               TSTM WIND  (G45)        Thunderstorm Wind
+## 432 425                 TSTM WIND (41)        Thunderstorm Wind
+## 433 426                TSTM WIND (G35)        Thunderstorm Wind
+## 434 427                TSTM WIND (G40)        Thunderstorm Wind
+## 435 428                TSTM WIND (G45)        Thunderstorm Wind
+## 436 429                   TSTM WIND 40        Thunderstorm Wind
+## 437 430                   TSTM WIND 45        Thunderstorm Wind
+## 438 431                   TSTM WIND 55        Thunderstorm Wind
+## 439 432                  TSTM WIND 65)        Thunderstorm Wind
+## 440 433        TSTM WIND AND LIGHTNING        Thunderstorm Wind
+## 441 434               TSTM WIND DAMAGE        Thunderstorm Wind
+## 442 435                  TSTM WIND G45        Thunderstorm Wind
+## 443 436                  TSTM WIND G58        Thunderstorm Wind
+## 444 437                 TSTM WIND/HAIL        Thunderstorm Wind
+## 445 438                     TSTM WINDS        Thunderstorm Wind
+## 446 439                          TSTMW        Thunderstorm Wind
+## 447 441               TUNDERSTORM WIND        Thunderstorm Wind
+## 448  34               COLD AIR TORNADO                  Tornado
+## 449 126                       GUSTNADO                  Tornado
+## 450 407                        TORNADO                  Tornado
+## 451 408                     TORNADO F0                  Tornado
+## 452 409                     TORNADO F1                  Tornado
+## 453 410                     TORNADO F2                  Tornado
+## 454 411                     TORNADO F3                  Tornado
+## 455 412                      TORNADOES                  Tornado
+## 456 413     TORNADOES, TSTM WIND, HAIL                  Tornado
+## 457 414                        TORNDAO                  Tornado
+## 458 416            TROPICAL DEPRESSION      Tropical Depression
+## 459 417                 TROPICAL STORM           Tropical Storm
+## 460 418         TROPICAL STORM ALBERTO           Tropical Storm
+## 461 419            TROPICAL STORM DEAN           Tropical Storm
+## 462 420          TROPICAL STORM GORDON           Tropical Storm
+## 463 421           TROPICAL STORM JERRY           Tropical Storm
+## 464 440                        TSUNAMI                  Tsunami
+## 465 457                   VOLCANIC ASH             Volcanic Ash
+## 466 459                     WATERSPOUT               Waterspout
+## 467 460                    WATERSPOUT-               Waterspout
+## 468 461             WATERSPOUT-TORNADO               Waterspout
+## 469 462             WATERSPOUT TORNADO               Waterspout
+## 470 463            WATERSPOUT/ TORNADO               Waterspout
+## 471 464             WATERSPOUT/TORNADO               Waterspout
+## 472 465                 WET MICROBURST               Waterspout
+## 473  20                     BRUSH FIRE                 Wildfire
+## 474 100                   FOREST FIRES                 Wildfire
+## 475 124                    GRASS FIRES                 Wildfire
+## 476 468                     WILD FIRES                 Wildfire
+## 477 469               WILD/FOREST FIRE                 Wildfire
+## 478 470              WILD/FOREST FIRES                 Wildfire
+## 479 471                       WILDFIRE                 Wildfire
+## 480 472                      WILDFIRES                 Wildfire
 ## 481 481                   WINTER STORM             Winter Storm
 ## 482 482        WINTER STORM HIGH WINDS             Winter Storm
 ## 483 483                  WINTER STORMS             Winter Storm
@@ -645,9 +637,91 @@ new_event_types</code></pre>
 ## 487 487                     Wintry Mix           Winter Weather
 ## 488 488                     WINTRY MIX           Winter Weather</code></pre>
 <p>After that, the values of <code>EVTYPE</code> are replaced using the data in <code>new_event_types</code>:</p>
+<pre class="r"><code>NOAA_popu_new &lt;- NOAA_popu
+NOAA_econ_new &lt;- NOAA_econ
+NOAA_popu_new$EVTYPE &lt;- as.character(NOAA_popu$EVTYPE)
+NOAA_econ_new$EVTYPE &lt;- as.character(NOAA_econ$EVTYPE)
+for (i in 1:nrow(new_event_types)){
+        c &lt;- as.character(new_event_types[i,2])
+    d &lt;- as.character(new_event_types[i,3])
+    for (j in 1:nrow(NOAA_econ)){
+                if (NOAA_econ_new[j,1] == c) {
+                        NOAA_econ_new[j,1] &lt;- d
+                }
+        }
+        for (j in 1:nrow(NOAA_popu)){
+                if (NOAA_popu_new[j,1] == c) {
+                        NOAA_popu_new[j,1] &lt;- d
+                }
+        }
+}
+
+NOAA_popu_new$popul_health &lt;- as.numeric(NOAA_popu_new$popul_health)
+
+NOAA_econ_new$econ_cons &lt;- as.numeric(NOAA_econ_new$econ_cons)</code></pre>
+<p>Finally, the data frame is grouped again by <code>EVTYPE</code> and <code>summarize(sum())</code> is used to come to less than or 48 observations in each table (<code>NOAA_popu_new</code> and <code>NOAA_econ_new</code>). This will depend on whether all 48 types of observations are present in the data set or not.</p>
+<pre class="r"><code>NOAA_popu_final &lt;- NOAA_popu_new %&gt;% group_by(EVTYPE) %&gt;%
+        summarize(popul_health=sum(popul_health)) %&gt;% arrange(desc(popul_health))
+NOAA_econ_final &lt;- NOAA_econ_new %&gt;% group_by(EVTYPE) %&gt;%
+        summarize(econ_cons=sum(econ_cons)) %&gt;% arrange(desc(econ_cons))</code></pre>
+<p>The number of observations in each table is:<br />* <code>NOAA_popu_final:</code> 46<br />* <code>NOAA_econ_final:</code> 46<br />Which is consistent with 48 standard event types.</p>
 </div>
 <div id="results" class="section level2">
 <h2>Results</h2>
+<p>Next, the answers to the two questions above will be answered by means of two bar plots.</p>
+<div id="across-the-united-states-which-types-of-events-as-indicated-in-the-evtype-variable-are-most-harmful-with-respect-to-population-health" class="section level3">
+<h3>Across the United States, which types of events (as indicated in the <code>EVTYPE</code> variable) are most harmful with respect to population health?</h3>
+<p>For simplicity purposes, only the first 10 events are plotted.</p>
+<pre class="r"><code>library(ggplot2)
+ggplot(NOAA_popu_final[1:10,], aes(x=EVTYPE, y=popul_health)) +
+        geom_bar(stat = &quot;identity&quot;) +
+        ggtitle(&quot;Fig.1. Events With Most Effect On Population Health&quot;) +
+        xlab(&quot;Event Type&quot;) + ylab(&quot;Fatalities + Injuries&quot;) + theme_minimal() +
+        theme(axis.text.x = element_text(angle = 90, hjust = 1)) + coord_flip()</code></pre>
+<p><img src="data:image/png;base64,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" title alt width="672" /></p>
+<p>Here is the information in tabular form:</p>
+<pre class="r"><code>NOAA_popu_final[1:10,]</code></pre>
+<pre><code>## Source: local data frame [10 x 2]
+## 
+##               EVTYPE popul_health
+## 1            Tornado        97022
+## 2               Heat        12422
+## 3  Thunderstorm Wind        10222
+## 4              Flood         7385
+## 5          Lightning         6048
+## 6        Flash Flood         2837
+## 7          Ice Storm         2064
+## 8          High Wind         1822
+## 9           Wildfire         1698
+## 10      Winter Storm         1570</code></pre>
+<p>As can be seen both in the table and the plot, Tornado, Heat, Thunderstorm Wind, Flood and Lightning are the five events most harmful for population health.</p>
+</div>
+<div id="across-the-united-states-which-types-of-events-have-the-greatest-economic-consequences" class="section level3">
+<h3>Across the United States, which types of events have the greatest economic consequences?</h3>
+<p>As in the previous case, only the 10 first event types are plotted.</p>
+<pre class="r"><code>library(ggplot2)
+ggplot(NOAA_econ_final[1:10,], aes(x=EVTYPE, y=econ_cons)) +
+        geom_bar(stat = &quot;identity&quot;) +
+        ggtitle(&quot;Fig.2. Events With Greatest Economic Consequences&quot;) +
+        xlab(&quot;Event Type&quot;) + ylab(&quot;Property + Crop Damage in kUSD&quot;) + theme_minimal() +
+        theme(axis.text.x = element_text(angle = 90, hjust = 1)) + coord_flip()</code></pre>
+<p><img src="data:image/png;base64,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" title alt width="672" /></p>
+<p>Here is the information in tabular form:</p>
+<pre class="r"><code>NOAA_econ_final[1:10,]</code></pre>
+<pre><code>## Source: local data frame [10 x 2]
+## 
+##               EVTYPE econ_cons
+## 1            Tornado 3314666.9
+## 2  Thunderstorm Wind 2874733.3
+## 3        Flash Flood 1660846.1
+## 4               Hail 1271300.3
+## 5              Flood 1148368.9
+## 6          Lightning  606977.4
+## 7          High Wind  407107.1
+## 8         Heavy Snow  138763.1
+## 9       Winter Storm  135764.6
+## 10          Wildfire  134784.0</code></pre>
+<p>As can be seen both in the table and the plot, Tornado, Thunderstorm Wind, Flash Flood, Hail and Flood are the five events having most consequences from an economic perspective.</p>
 </div>
 </div>
 
